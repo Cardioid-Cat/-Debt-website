@@ -106,9 +106,13 @@ def delete_item(type, id_val):
     slug = request.args.get('slug')
     room = db.get_room(slug)
     if room and session.get(f"auth_{room['room_id']}"):
-        if type == 'game': db.delete_game_preset(id_val)
-        elif type == 'ex': db.delete_exercise_type(id_val, room['room_id'])
-        elif type == 'profile': db.delete_profile(id_val, room['room_id'])
+        # Теперь передаем room_id везде, где это нужно для удаления зависимостей
+        if type == 'game': 
+            db.delete_game_preset(id_val)
+        elif type == 'ex': 
+            db.delete_exercise_type(id_val, room['room_id'])
+        elif type == 'profile': 
+            db.delete_profile(id_val, room['room_id'])
     return redirect(url_for('index', room=slug))
 
 @website.route('/undo/<slug>')
