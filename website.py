@@ -93,7 +93,6 @@ def add_game():
         val_raw = request.form.get('val', '').strip()
         u_type = db.get_ex_type(ex_name, room['room_id'])
         
-        # Валидация для кол-ва в пресетах игр
         if u_type == 'amount' and ":" in val_raw:
              flash("Ошибка: Для этого упражнения нельзя использовать формат ММ:СС")
              return redirect(url_for('index', room=slug))
@@ -147,9 +146,10 @@ def delete_item(type, id_val):
     slug = request.args.get('slug')
     room = db.get_room(slug)
     if room and session.get(f"auth_{room['room_id']}"):
+        # Передаем room_id для безопасной очистки логов
         if type == 'game': db.delete_game_preset(id_val)
         elif type == 'ex': db.delete_exercise_type(id_val, room['room_id'])
-        elif type == 'profile': db.delete_profile(id_val)
+        elif type == 'profile': db.delete_profile(id_val, room['room_id'])
     return redirect(url_for('index', room=slug))
 
 @website.route('/undo/<slug>')
@@ -169,7 +169,6 @@ def add_log():
     val_raw = request.form.get('value', '').strip()
     action_type = request.form.get('action_type') 
     
-    # Валидация формата
     u_type = db.get_ex_type(ex_name, room['room_id'])
     if u_type == 'amount' and ":" in val_raw:
         flash("Ошибка: Для этого упражнения вводите только числа")
