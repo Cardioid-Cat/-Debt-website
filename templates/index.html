@@ -20,23 +20,48 @@
             flex-direction: column; 
             transition: width 0.3s ease; 
             position: relative;
-            overflow: hidden; /* Текст не будет вылезать за границы */
+            overflow-y: auto;
             white-space: nowrap;
         }
         .sidebar.collapsed { width: 85px; padding: 25px 12px; }
         
-        /* Скрытие текста */
         .sidebar.collapsed .sidebar-text, 
         .sidebar.collapsed .sidebar-hide,
-        .sidebar.collapsed .undo-section { display: none !important; }
+        .sidebar.collapsed .undo-section,
+        .sidebar.collapsed .submenu-settings { display: none !important; }
         .sidebar.collapsed h5 { visibility: hidden; }
 
         .toggle-btn { position: absolute; right: 5px; top: 20px; background: #fff; border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer; z-index: 100; padding: 2px 5px; }
 
-        .nav-link-custom { background: #fff; border: 1px solid var(--border-color); border-radius: 12px; padding: 12px; margin-bottom: 10px; display: flex; align-items: center; text-decoration: none; color: #2D3748; font-weight: 500; font-size: 0.85rem; }
-        .sidebar.collapsed .nav-link-custom { justify-content: center; padding: 12px 0; border: none; background: transparent; }
+        /* Элементы меню */
+        .nav-link-custom { background: #fff; border: 1px solid var(--border-color); border-radius: 12px; padding: 12px; margin-bottom: 5px; display: flex; align-items: center; text-decoration: none; color: #2D3748; font-weight: 500; font-size: 0.85rem; cursor: pointer; transition: 0.2s; }
+        .nav-link-custom:hover { background: #f8f9fa; }
         .nav-link-custom i:first-child { margin-right: 10px; }
+        .sidebar.collapsed .nav-link-custom { justify-content: center; padding: 12px 0; border: none; background: transparent; }
         .sidebar.collapsed .nav-link-custom i:first-child { margin-right: 0; font-size: 1.3rem; }
+
+        /* Вложенное меню (Submenu) */
+        .submenu-settings { 
+            display: none; 
+            background: #fff; 
+            border: 1px solid var(--border-color); 
+            border-radius: 12px; 
+            margin-bottom: 15px; 
+            padding: 8px; 
+            flex-direction: column;
+            gap: 4px;
+        }
+        .submenu-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 10px;
+            font-size: 0.8rem;
+            border-bottom: 1px solid #f1f1f1;
+        }
+        .submenu-item:last-child { border-bottom: none; }
+        .btn-del-tiny { color: #A0AEC0; cursor: pointer; transition: 0.2s; border: none; background: none; padding: 0 5px; }
+        .btn-del-tiny:hover { color: var(--accent-red); }
 
         /* Tabs */
         .tab-btn { cursor: pointer; padding-bottom: 10px; font-weight: 700; color: #A0AEC0; border-bottom: 3px solid transparent; }
@@ -69,9 +94,38 @@
             {% if is_admin %}
                 <a href="/logout?slug={{ room.slug|urlencode }}" class="btn btn-sm btn-light mb-4 border sidebar-text">Выйти</a>
                 
-                <a href="#" class="nav-link-custom"><i class="bi bi-controller"></i> <span class="sidebar-text">НАСТРОЙКА ИГР</span></a>
-                <a href="#" class="nav-link-custom"><i class="bi bi-person-walking"></i> <span class="sidebar-text">УПРАЖНЕНИЯ</span></a>
-                <a href="#" class="nav-link-custom"><i class="bi bi-person-fill"></i> <span class="sidebar-text">УЧАСТНИКИ</span></a>
+                <div class="nav-link-custom" onclick="toggleSubmenu('sub-games')"><i class="bi bi-controller"></i> <span class="sidebar-text">НАСТРОЙКА ИГР</span></div>
+                <div id="sub-games" class="submenu-settings">
+                    {% for g in games %}
+                    <div class="submenu-item">
+                        <span>{{ g.name }}</span>
+                        <button class="btn-del-tiny" onclick="confirmDelete('/delete_game/{{ g.id }}', '{{ g.name }}')"><i class="bi bi-trash"></i></button>
+                    </div>
+                    {% endfor %}
+                    <a href="#" class="text-center small mt-1 text-decoration-none text-muted">+ Добавить</a>
+                </div>
+
+                <div class="nav-link-custom" onclick="toggleSubmenu('sub-ex')"><i class="bi bi-person-walking"></i> <span class="sidebar-text">УПРАЖНЕНИЯ</span></div>
+                <div id="sub-ex" class="submenu-settings">
+                    {% for ex in ex_types %}
+                    <div class="submenu-item">
+                        <span>{{ ex.name }}</span>
+                        <button class="btn-del-tiny" onclick="confirmDelete('/delete_ex/{{ ex.id }}', '{{ ex.name }}')"><i class="bi bi-trash"></i></button>
+                    </div>
+                    {% endfor %}
+                    <a href="#" class="text-center small mt-1 text-decoration-none text-muted">+ Добавить</a>
+                </div>
+
+                <div class="nav-link-custom" onclick="toggleSubmenu('sub-users')"><i class="bi bi-person-fill"></i> <span class="sidebar-text">УЧАСТНИКИ</span></div>
+                <div id="sub-users" class="submenu-settings">
+                    {% for p in profiles %}
+                    <div class="submenu-item">
+                        <span>{{ p.name }}</span>
+                        <button class="btn-del-tiny" onclick="confirmDelete('/delete_profile/{{ p.id }}', '{{ p.name }}')"><i class="bi bi-trash"></i></button>
+                    </div>
+                    {% endfor %}
+                    <a href="#" class="text-center small mt-1 text-decoration-none text-muted">+ Добавить</a>
+                </div>
 
                 <div class="undo-section">
                     <p class="small text-muted mb-1 sidebar-text" style="font-size: 0.75rem;">{{ last_action_text or 'Нет действий' }}</p>
@@ -107,51 +161,51 @@
         </div>
 
         <div id="view-vvod">
-    <form action="/add_log" method="POST" id="vvod-form">
-        <input type="hidden" name="slug" value="{{ room.slug }}">
-        <input type="hidden" name="action_type" id="action_type" value="add">
-        
-        <label class="text-muted small">Кому?</label>
-        <select class="form-select form-select-lg mb-3 border-0 bg-light" name="profile_id" id="user-select" style="border-radius: 12px;" required>
-            <option value="" disabled selected>Выберите человека...</option>
-            {% for p in profiles %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}
-        </select>
+            <form action="/add_log" method="POST" id="vvod-form">
+                <input type="hidden" name="slug" value="{{ room.slug }}">
+                <input type="hidden" name="action_type" id="action_type" value="add">
+                
+                <label class="text-muted small">Кому?</label>
+                <select class="form-select form-select-lg mb-3 border-0 bg-light" name="profile_id" id="user-select" style="border-radius: 12px;" required>
+                    <option value="" disabled selected>Выберите человека...</option>
+                    {% for p in profiles %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}
+                </select>
 
-        <input type="hidden" name="ex_name" id="selected-ex-name" required>
-        <div class="ex-grid mb-4">
-            {% for ex in ex_types %}
-                <div class="btn-check-custom" onclick="selectExercise(this, '{{ ex.name }}')">{{ ex.name }}</div>
-            {% endfor %}
-        </div>
+                <input type="hidden" name="ex_name" id="selected-ex-name" required>
+                <div class="ex-grid mb-4">
+                    {% for ex in ex_types %}
+                        <div class="btn-check-custom" onclick="selectExercise(this, '{{ ex.name }}')">{{ ex.name }}</div>
+                    {% endfor %}
+                </div>
 
-        <div id="vvod-controls" style="display:none;">
-            <label class="small text-muted">Сколько?</label>
-            <input type="text" name="value" id="vvod-value" class="form-control form-control-lg mb-3" placeholder="0" required>
-            <div class="d-flex gap-2">
-                <button type="submit" class="btn-main" onclick="document.getElementById('action_type').value='add'">➕ Добавить долг</button>
-                <button type="submit" class="btn-outline-green px-4" onclick="document.getElementById('action_type').value='writeoff'"><i class="bi bi-check2"></i> Списать</button>
-            </div>
+                <div id="vvod-controls" style="display:none;">
+                    <label class="small text-muted">Сколько?</label>
+                    <input type="text" name="value" id="vvod-value" class="form-control form-control-lg mb-3" placeholder="0" required>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn-main" onclick="document.getElementById('action_type').value='add'">➕ Добавить долг</button>
+                        <button type="submit" class="btn-outline-green px-4" onclick="document.getElementById('action_type').value='writeoff'"><i class="bi bi-check2"></i> Списать</button>
+                    </div>
+                </div>
+            </form>
         </div>
-    </form>
-</div>
 
         <div id="view-igra" style="display:none;">
-    <form action="/play_game" method="POST" id="game-form">
-        <input type="hidden" name="slug" value="{{ room.slug }}">
-        
-        <label class="small text-muted">Игра?</label>
-        <select name="game_name" class="form-select mb-3 bg-light border-0 py-2">
-            {% for game in games %}<option>{{ game.name }}</option>{% endfor %}
-        </select>
+            <form action="/play_game" method="POST" id="game-form">
+                <input type="hidden" name="slug" value="{{ room.slug }}">
+                
+                <label class="small text-muted">Игра?</label>
+                <select name="game_name" class="form-select mb-3 bg-light border-0 py-2">
+                    {% for game in games %}<option>{{ game.name }}</option>{% endfor %}
+                </select>
 
-        <label class="small text-muted">Кто победил?</label>
-        <select name="winner_ids" id="winners-select" class="form-select mb-3 bg-light border-0" multiple style="height: 120px;" required>
-            {% for p in profiles %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}
-        </select>
+                <label class="small text-muted">Кто победил?</label>
+                <select name="winner_ids" id="winners-select" class="form-select mb-3 bg-light border-0" multiple style="height: 120px;" required>
+                    {% for p in profiles %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}
+                </select>
 
-        <button type="submit" class="btn-main mb-3">🔥 Раздать долги</button>
-    </form>
-</div>
+                <button type="submit" class="btn-main mb-3">🔥 Раздать долги</button>
+            </form>
+        </div>
         {% endif %}
 
         <h4 class="mt-5 mb-3">🥇 Зал славы</h4>
@@ -195,7 +249,7 @@
                 <div class="modal-body text-center p-4">
                     <h6 class="mb-3">Отменить последнее действие?</h6>
                     <div class="d-flex gap-2">
-                        <button class="btn btn-danger w-100 btn-sm">Да</button>
+                        <a href="/undo?slug={{ room.slug|urlencode }}" class="btn btn-danger w-100 btn-sm text-decoration-none">Да</a>
                         <button class="btn btn-light border w-100 btn-sm" data-bs-dismiss="modal">Нет</button>
                     </div>
                 </div>
@@ -211,6 +265,16 @@
             const icon = document.getElementById('toggle-icon');
             sb.classList.toggle('collapsed');
             icon.className = sb.classList.contains('collapsed') ? 'bi bi-chevron-double-right' : 'bi bi-chevron-double-left';
+        }
+
+        // Функция открытия/закрытия подменю в левой колонке
+        function toggleSubmenu(id) {
+            const menu = document.getElementById(id);
+            const isVisible = menu.style.display === 'flex';
+            // Сначала закроем все остальные
+            document.querySelectorAll('.submenu-settings').forEach(m => m.style.display = 'none');
+            // Переключим текущее
+            menu.style.display = isVisible ? 'none' : 'flex';
         }
 
         function togglePasswordVisibility() {
@@ -233,23 +297,17 @@
         }
 
         function selectExercise(el, name) {
-    document.querySelectorAll('.btn-check-custom').forEach(b => b.classList.remove('selected-ex'));
-    el.classList.add('selected-ex');
-    document.getElementById('selected-ex-name').value = name; // Записываем имя упражнения в скрытое поле
-    document.getElementById('vvod-controls').style.display = 'block';
-}
-
-        function handleDistribute() {
-            const winners = document.getElementById('winners-select').selectedOptions;
-            const error = document.getElementById('winner-error');
-            error.style.display = (winners.length === 0) ? 'block' : 'none';
+            document.querySelectorAll('.btn-check-custom').forEach(b => b.classList.remove('selected-ex'));
+            el.classList.add('selected-ex');
+            document.getElementById('selected-ex-name').value = name;
+            document.getElementById('vvod-controls').style.display = 'block';
         }
 
-        function submitData(action) {
-            const user = document.getElementById('user-select').value;
-            const val = document.getElementById('vvod-value').value;
-            if(!user || !val) { alert("Выберите пользователя и введите значение"); return; }
-            alert("Действие: " + action + " для " + user);
+        // Подтверждение удаления
+        function confirmDelete(url, name) {
+            if (confirm(`Вы уверены, что хотите удалить "${name}"?`)) {
+                window.location.href = url + "?slug={{ room.slug|urlencode }}";
+            }
         }
     </script>
 </body>
