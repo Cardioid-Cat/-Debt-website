@@ -24,7 +24,7 @@ def time_to_seconds(t_str):
                 m, s = map(int, parts)
                 return m * 60 + s
         return int(t_str)
-    except: return None # Возвращаем None для проверки ошибок
+    except: return None
 
 @website.route('/')
 @website.route('/<slug>')
@@ -44,24 +44,32 @@ def index(slug=None):
     games = db.get_data("games_presets", room_actual_id)
     logs = db.get_data("workout_logs", room_actual_id)
     
-    # 1. Инициализируем именами всех участников из базы
+    # --- ИСПРАВЛЕННЫЙ БЛОК РАСЧЕТА ---
     summary = {p['name']: {} for p in profiles}
+    id_to_name = {p['id']: p['name'] for p in profiles}
     
     ex_map = {ex['name']: ex['unit_type'] for ex in ex_types}
     ex_icons = {ex['name']: ("🕒" if ex['unit_type'] == 'time' else "💪") for ex in ex_types}
 
-    # 2. Суммируем логи только для существующих в списке имен
     for l in logs:
-        name, ex, amt = l['profile_name'], l['exercise_type'], l['amount']
+        # Берем имя либо по ID (как в твоей базе), либо напрямую из лога
+        p_id = l.get('profile_id')
+        p_name_in_log = l.get('profile_name')
+        name = id_to_name.get(p_id) or p_name_in_log
+        
         if name in summary:
+            ex = l['exercise_type']
+            amt = l['amount']
             summary[name].setdefault(ex, 0)
             summary[name][ex] += amt
+    # --------------------------------
 
     is_admin = session.get(f"auth_{room['room_id']}")
     last_log = logs[0] if logs else None 
     last_action_text = ""
     if last_log:
-        last_action_text = f"Последнее: {last_log['profile_name']} - {last_log['exercise_type']}"
+        p_act_name = id_to_name.get(last_log.get('profile_id')) or last_log.get('profile_name', 'Кто-то')
+        last_action_text = f"Последнее: {p_act_name} - {last_log['exercise_type']}"
 
     return render_template('index.html', 
                            room=room, 
@@ -82,20 +90,15 @@ def add_game():
         name = request.form.get('name', '').strip()
         ex_name = request.form.get('ex_name')
         val_raw = request.form.get('val', '').strip()
-        
         u_type = db.get_ex_type(ex_name, room['room_id'])
         val_numeric = time_to_seconds(val_raw)
-
         if val_numeric is None:
-            flash(f"Ошибка: Некорректное значение '{val_raw}'. Введите число или ММ:СС")
+            flash(f"Ошибка: Некорректное значение '{val_raw}'.")
             return redirect(url_for('index', room=slug))
-
-        # Проверка на дубликаты игр
         existing = db.get_data("games_presets", room['room_id'])
         if any(g['game_name'].lower() == name.lower() for g in existing):
             flash("Ошибка: Такая игра уже есть!")
             return redirect(url_for('index', room=slug))
-
         db.add_game_preset(room['room_id'], name, ex_name, val_numeric, u_type)
     return redirect(url_for('index', room=slug))
 
@@ -124,7 +127,7 @@ def add_profile():
         if name:
             existing = db.get_data("profiles", room['room_id'])
             if any(p['name'].lower() == name.lower() for p in existing):
-                flash("Ошибка: Пользователь с таким именем уже существует!")
+                flash("Ошибка: Пользователь существует!")
             else:
                 db.add_profile(room['room_id'], name)
         else: flash("Имя не может быть пустым")
@@ -152,22 +155,16 @@ def add_log():
     slug = request.form.get('slug')
     room = db.get_room(slug)
     if not room or not session.get(f"auth_{room['room_id']}"): return "403", 403
-    
     p_id = request.form.get('profile_id')
     ex_name = request.form.get('ex_name')
     val_raw = request.form.get('value', '').strip()
     action_type = request.form.get('action_type') 
-    
-    ex_type_info = db.get_ex_type(ex_name, room['room_id'])
     amt = time_to_seconds(val_raw)
-    
     if amt is None:
-        flash("Ошибка: Введите корректное число или время (ММ:СС)")
+        flash("Ошибка: Некорректное значение")
         return redirect(url_for('index', room=slug))
-
     final_amt = -amt if action_type == 'writeoff' else amt
     db.add_log(p_id, ex_name, final_amt, room['room_id'])
-    
     p_name = db.get_profile_name(p_id)
     action_txt = "списал(а)" if action_type == 'writeoff' else "получил(а) долг"
     send_tg_notification(room, f"⚖️ {p_name} {action_txt}: {ex_name} ({val_raw})")
@@ -178,33 +175,23 @@ def play_game():
     slug = request.form.get('slug')
     room = db.get_room(slug)
     if not room or not session.get(f"auth_{room['room_id']}"): return "403", 403
-    
     game_name = request.form.get('game_name')
-    winner_ids = request.form.getlist('winner_ids') # Список ID победителей
-    
-    # Получаем инфо об игре
+    winner_ids = request.form.getlist('winner_ids')
     games = db.get_data("games_presets", room['room_id'])
     game = next((g for g in games if g['game_name'] == game_name), None)
-    
     if not game or not winner_ids:
         flash("Ошибка: Выберите игру и победителей")
         return redirect(url_for('index', room=slug))
-
-    # Раздаем долги всем профилям, КРОМЕ победителей
     all_profiles = db.get_data("profiles", room['room_id'])
     losers_names = []
-    
     for p in all_profiles:
         if str(p['id']) not in winner_ids:
-            # Превращаем значение в int, чтобы избежать ошибки "str and int"
             val_to_add = int(game['val']) 
             db.add_log(p['id'], game['ex_name'], val_to_add, room['room_id'])
             losers_names.append(p['name'])
-    
     if losers_names:
-        msg = f"🎮 Игра: {game_name}\n💀 Проиграли и получили долг ({game['val']}): {', '.join(losers_names)}"
+        msg = f"🎮 Игра: {game_name}\n💀 Проиграли: {', '.join(losers_names)} (+{game['val']})"
         send_tg_notification(room, msg)
-        
     return redirect(url_for('index', room=slug))
 
 @website.route('/login', methods=['POST'])
