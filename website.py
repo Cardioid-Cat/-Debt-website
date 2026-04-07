@@ -16,14 +16,15 @@ def send_tg_notification(room, text):
     except: pass
 
 def time_to_seconds(t_str):
-    """Конвертирует 1:30 или 90 в секунды. Удаляет лишние пробелы."""
     t_str = str(t_str).strip()
     try:
         if ":" in t_str:
-            m, s = map(int, t_str.split(":"))
-            return m * 60 + s
+            parts = t_str.split(":")
+            if len(parts) == 2:
+                m, s = map(int, parts)
+                return m * 60 + s
         return int(t_str)
-    except: return 0
+    except: return None # Возвращаем None для проверки ошибок
 
 @website.route('/')
 @website.route('/<slug>')
@@ -45,8 +46,6 @@ def index(slug=None):
     
     summary = {}
     ex_map = {ex['name']: ex['unit_type'] for ex in ex_types}
-    
-    # Мапа для иконок в таблице долгов
     ex_icons = {ex['name']: ("🕒" if ex['unit_type'] == 'time' else "💪") for ex in ex_types}
 
     for l in logs:
@@ -80,19 +79,18 @@ def add_game():
         ex_name = request.form.get('ex_name')
         val_raw = request.form.get('val', '').strip()
         
-        if not name or not val_raw:
-            flash("Ошибка: Название игры и значение не могут быть пустыми")
+        u_type = db.get_ex_type(ex_name, room['room_id'])
+        val_numeric = time_to_seconds(val_raw)
+
+        if val_numeric is None:
+            flash(f"Ошибка: Некорректное значение '{val_raw}'. Введите число или ММ:СС")
             return redirect(url_for('index', room=slug))
 
-        u_type = db.get_ex_type(ex_name, room['room_id'])
-        val_numeric = time_to_seconds(val_raw) if u_type == 'time' else int(val_raw)
-
-        # Проверка на дубликаты
-        existing_games = db.get_data("games_presets", room['room_id'])
-        for g in existing_games:
-            if g['game_name'].lower() == name.lower():
-                flash("Игра с таким названием уже существует")
-                return redirect(url_for('index', room=slug))
+        # Проверка на дубликаты игр
+        existing = db.get_data("games_presets", room['room_id'])
+        if any(g['game_name'].lower() == name.lower() for g in existing):
+            flash("Ошибка: Такая игра уже есть!")
+            return redirect(url_for('index', room=slug))
 
         db.add_game_preset(room['room_id'], name, ex_name, val_numeric, u_type)
     return redirect(url_for('index', room=slug))
@@ -104,10 +102,13 @@ def add_exercise():
     if room and session.get(f"auth_{room['room_id']}"):
         name = request.form.get('name', '').strip()
         u_type = request.form.get('unit_type')
-        if name: 
-            db.add_exercise_type(room['room_id'], name, u_type)
-        else:
-            flash("Ошибка: Название упражнения не может быть пустым!")
+        if name:
+            existing = db.get_data("exercise_types", room['room_id'])
+            if any(ex['name'].lower() == name.lower() for ex in existing):
+                flash("Ошибка: Такое упражнение уже есть!")
+            else:
+                db.add_exercise_type(room['room_id'], name, u_type)
+        else: flash("Название не может быть пустым")
     return redirect(url_for('index', room=slug))
 
 @website.route('/add_profile', methods=['POST'])
@@ -116,10 +117,13 @@ def add_profile():
     room = db.get_room(slug)
     if room and session.get(f"auth_{room['room_id']}"):
         name = request.form.get('name', '').strip()
-        if name: 
-            db.add_profile(room['room_id'], name)
-        else:
-            flash("Ошибка: Имя не может быть пустым!")
+        if name:
+            existing = db.get_data("profiles", room['room_id'])
+            if any(p['name'].lower() == name.lower() for p in existing):
+                flash("Ошибка: Пользователь с таким именем уже существует!")
+            else:
+                db.add_profile(room['room_id'], name)
+        else: flash("Имя не может быть пустым")
     return redirect(url_for('index', room=slug))
 
 @website.route('/delete_<type>/<int:id_val>')
@@ -143,27 +147,60 @@ def undo(slug):
 def add_log():
     slug = request.form.get('slug')
     room = db.get_room(slug)
-    if not room or not session.get(f"auth_{room['room_id']}"): return "Доступ запрещен", 403
+    if not room or not session.get(f"auth_{room['room_id']}"): return "403", 403
     
     p_id = request.form.get('profile_id')
     ex_name = request.form.get('ex_name')
     val_raw = request.form.get('value', '').strip()
     action_type = request.form.get('action_type') 
     
-    if not val_raw:
-        flash("Введите количество или время")
+    ex_type_info = db.get_ex_type(ex_name, room['room_id'])
+    amt = time_to_seconds(val_raw)
+    
+    if amt is None:
+        flash("Ошибка: Введите корректное число или время (ММ:СС)")
         return redirect(url_for('index', room=slug))
 
-    ex_type_info = db.get_ex_type(ex_name, room['room_id'])
-    amt = time_to_seconds(val_raw) if ex_type_info == 'time' else int(val_raw)
-    
     final_amt = -amt if action_type == 'writeoff' else amt
     db.add_log(p_id, ex_name, final_amt, room['room_id'])
     
     p_name = db.get_profile_name(p_id)
     action_txt = "списал(а)" if action_type == 'writeoff' else "получил(а) долг"
-    
     send_tg_notification(room, f"⚖️ {p_name} {action_txt}: {ex_name} ({val_raw})")
+    return redirect(url_for('index', room=slug))
+
+@website.route('/play_game', methods=['POST'])
+def play_game():
+    slug = request.form.get('slug')
+    room = db.get_room(slug)
+    if not room or not session.get(f"auth_{room['room_id']}"): return "403", 403
+    
+    game_name = request.form.get('game_name')
+    winner_ids = request.form.getlist('winner_ids') # Список ID победителей
+    
+    # Получаем инфо об игре
+    games = db.get_data("games_presets", room['room_id'])
+    game = next((g for g in games if g['game_name'] == game_name), None)
+    
+    if not game or not winner_ids:
+        flash("Ошибка: Выберите игру и победителей")
+        return redirect(url_for('index', room=slug))
+
+    # Раздаем долги всем профилям, КРОМЕ победителей
+    all_profiles = db.get_data("profiles", room['room_id'])
+    losers_names = []
+    
+    for p in all_profiles:
+        if str(p['id']) not in winner_ids:
+            # Превращаем значение в int, чтобы избежать ошибки "str and int"
+            val_to_add = int(game['val']) 
+            db.add_log(p['id'], game['ex_name'], val_to_add, room['room_id'])
+            losers_names.append(p['name'])
+    
+    if losers_names:
+        msg = f"🎮 Игра: {game_name}\n💀 Проиграли и получили долг ({game['val']}): {', '.join(losers_names)}"
+        send_tg_notification(room, msg)
+        
     return redirect(url_for('index', room=slug))
 
 @website.route('/login', methods=['POST'])
@@ -189,11 +226,9 @@ def handle_create_room():
     slug = request.form.get('slug', '').strip()
     password = request.form.get('password')
     tg_id = request.form.get('tg_id', '').strip()
-    
     if not title or not slug:
-        flash("Название и адрес комнаты обязательны")
+        flash("Название и адрес обязательны")
         return redirect(url_for('index'))
-
     try:
         db.create_room(slug, title, password, tg_id if tg_id else None)
         return redirect(f"/{slug}")
