@@ -152,3 +152,25 @@ def delete_last_log(room_id):
         cursor.close()
         conn.close()
         
+def add_game_preset(room_id, name):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO games_presets (room_id, name) VALUES (?, ?)", (room_id, name))
+    conn.commit()
+    conn.close()
+
+def add_exercise_type(room_id, name, unit_type):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO exercise_types (room_id, name, unit_type) VALUES (?, ?, ?)", 
+                   (room_id, name, unit_type))
+    conn.commit()
+    conn.close()
+
+def add_profile(room_id, name):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO profiles (room_id, name) VALUES (?, ?)", (room_id, name))
+    conn.commit()
+    conn.close()
+    
