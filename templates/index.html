@@ -176,41 +176,47 @@
         <h4 class="mt-5 mb-3">📊 Текущие долги</h4>
         <div class="accordion" id="debtsAccordion">
             {% for name, items in summary.items() %}
-            {% set total_debt = 0 %}
-            {% for ex, val in items.items() %}{% set total_debt = total_debt + val %}{% endfor %}
+            {# Считаем, есть ли реальные долги > 0 #}
+            {% set has_real_debt = false %}
+            {% for ex, val in items.items() %}{% if val > 0 %}{% set has_real_debt = true %}{% endif %}{% endfor %}
             
-            {% if total_debt > 0 %}
             <div class="accordion-item border-0 mb-2 shadow-sm" style="border-radius: 12px; overflow: hidden;">
                 <h2 class="accordion-header">
+                    {# УБРАЛИ data-bs-parent, чтобы вкладки не закрывались сами #}
                     <button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ loop.index }}">
                         👤 {{ name }}
                     </button>
                 </h2>
-                <div id="collapse{{ loop.index }}" class="accordion-collapse collapse" data-bs-parent="#debtsAccordion">
+                {# УБРАЛИ data-bs-parent здесь тоже #}
+                <div id="collapse{{ loop.index }}" class="accordion-collapse collapse">
                     <div class="accordion-body bg-white">
-                        {% for ex, val in items.items() %}
-                            {% if val > 0 %}
-                                <div class="d-flex justify-content-between border-bottom py-2">
-                                    <span class="text-muted">
-                                        {{ ex_icons[ex] or '💪' }} {{ ex }}
-                                    </span>
-                                    <span class="fw-bold">
-                                        {% if ex_map[ex] == 'time' %}
-                                            {{ val//60 }}:{{ "%02d"|format(val%60) }}
-                                        {% else %}
-                                            {{ val }}
-                                        {% endif %}
-                                    </span>
-                                </div>
-                            {% endif %}
-                        {% endfor %}
+                        {% if not has_real_debt %}
+                            <div class="text-center py-2">
+                                <span class="text-success fw-bold">Долгов нет! ✨</span>
+                            </div>
+                        {% else %}
+                            {% for ex, val in items.items() %}
+                                {% if val > 0 %}
+                                    <div class="d-flex justify-content-between border-bottom py-2">
+                                        <span class="text-muted">
+                                            {{ ex_icons[ex] or '💪' }} {{ ex }}
+                                        </span>
+                                        <span class="fw-bold">
+                                            {% if ex_map[ex] == 'time' %}
+                                                {{ val//60 }}:{{ "%02d"|format(val%60) }}
+                                            {% else %}
+                                                {{ val }}
+                                            {% endif %}
+                                        </span>
+                                    </div>
+                                {% endif %}
+                            {% endfor %}
+                        {% endif %}
                     </div>
                 </div>
             </div>
-            {% endif %}
             {% endfor %}
         </div>
-    </div>
 
     <div class="modal fade" id="deleteConfirmModal" tabindex="-1">
       <div class="modal-dialog modal-dialog-centered">
