@@ -176,21 +176,19 @@
         <h4 class="mt-5 mb-3">📊 Текущие долги</h4>
         <div class="accordion" id="debtsAccordion">
             {% for name, items in summary.items() %}
-            {# Считаем, есть ли реальные долги > 0 #}
-            {% set has_real_debt = false %}
-            {% for ex, val in items.items() %}{% if val > 0 %}{% set has_real_debt = true %}{% endif %}{% endfor %}
+            {# Считаем, есть ли хотя бы один долг больше 0 #}
+            {% set ns = namespace(has_debt=false) %}
+            {% for ex, val in items.items() %}{% if val > 0 %}{% set ns.has_debt = true %}{% endif %}{% endfor %}
             
             <div class="accordion-item border-0 mb-2 shadow-sm" style="border-radius: 12px; overflow: hidden;">
                 <h2 class="accordion-header">
-                    {# УБРАЛИ data-bs-parent, чтобы вкладки не закрывались сами #}
                     <button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ loop.index }}">
                         👤 {{ name }}
                     </button>
                 </h2>
-                {# УБРАЛИ data-bs-parent здесь тоже #}
                 <div id="collapse{{ loop.index }}" class="accordion-collapse collapse">
                     <div class="accordion-body bg-white">
-                        {% if not has_real_debt %}
+                        {% if not ns.has_debt %}
                             <div class="text-center py-2">
                                 <span class="text-success fw-bold">Долгов нет! ✨</span>
                             </div>
