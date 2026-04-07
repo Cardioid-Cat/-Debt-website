@@ -8,87 +8,112 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <style>
         :root { --sidebar-bg: #F1F3F9; --accent-red: #FF5A50; }
-        body { background: #FFFFFF; font-family: 'Inter', sans-serif; display: flex; min-height: 100vh; margin: 0; }
+        body { background: #FFFFFF; font-family: 'Inter', sans-serif; display: flex; min-height: 100vh; margin: 0; overflow-x: hidden; }
         
         /* Sidebar Styles */
-        .sidebar { width: 260px; background: var(--sidebar-bg); border-right: 1px solid #E2E8F0; padding: 25px 15px; display: flex; flex-direction: column; }
-        .sidebar h5 { color: #4A5568; font-weight: 700; margin-bottom: 25px; display: flex; align-items: center; gap: 10px; }
+        .sidebar { width: 260px; background: var(--sidebar-bg); border-right: 1px solid #E2E8F0; padding: 25px 15px; display: flex; flex-direction: column; transition: all 0.3s ease; position: relative; }
+        .sidebar.collapsed { width: 80px; padding: 25px 10px; }
+        .sidebar.collapsed .sidebar-text, .sidebar.collapsed h5, .sidebar.collapsed .btn-logout { display: none; }
+        
+        /* Кнопка стрелочки (как на фото) */
+        .toggle-sidebar { position: absolute; right: -15px; top: 25px; background: #fff; border: 1px solid #E2E8F0; border-radius: 6px; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 100; color: #718096; }
+
         .nav-btn { width: 100%; text-align: left; background: #fff; border: 1px solid #E2E8F0; padding: 10px 15px; border-radius: 10px; margin-bottom: 10px; font-size: 0.9rem; color: #2D3748; display: flex; align-items: center; justify-content: space-between; }
         
         /* Main Content */
-        .main-content { flex-grow: 1; padding: 40px; max-width: 1200px; margin: 0 auto; }
+        .main-content { flex-grow: 1; padding: 40px; max-width: 1000px; transition: all 0.3s ease; }
         .room-title { font-weight: 800; font-size: 2.5rem; color: #2D3748; margin-bottom: 30px; }
         
-        /* Exercise Buttons */
-        .ex-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 20px; }
-        .ex-btn { background: #fff; border: 1px solid #E2E8F0; padding: 15px; border-radius: 12px; font-weight: 500; transition: 0.2s; }
-        .ex-btn:hover { border-color: var(--accent-red); color: var(--accent-red); }
-        
-        /* Debt Cards */
-        .debt-card { border: 1px solid #E2E8F0; border-radius: 12px; padding: 0; overflow: hidden; margin-bottom: 20px; }
-        .debt-header { background: #F8FAFC; padding: 12px 20px; border-bottom: 1px solid #E2E8F0; display: flex; align-items: center; gap: 10px; font-weight: 600; }
-        .debt-body { padding: 15px 20px; }
-        .debt-item { font-size: 0.95rem; margin-bottom: 8px; color: #4A5568; }
+        /* Вкладки */
+        .tab-btn { cursor: pointer; font-weight: 700; color: #A0AEC0; padding-bottom: 8px; border-bottom: 3px solid transparent; transition: 0.2s; }
+        .tab-btn.active { color: var(--accent-red); border-bottom-color: var(--accent-red); }
 
-        .btn-logout { background: #fff; border: 1px solid #E2E8F0; color: #718096; padding: 5px 15px; border-radius: 8px; font-size: 0.8rem; align-self: flex-start; margin-bottom: 30px; }
+        /* Сетка кнопок */
+        .ex-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 15px; }
+        .ex-btn { background: #fff; border: 1px solid #E2E8F0; padding: 12px; border-radius: 12px; font-weight: 500; transition: 0.2s; font-size: 0.9rem; }
+        .ex-btn.selected { border-color: var(--accent-red); color: var(--accent-red); background: #FFF5F5; }
+        
+        /* Скрытая панель ввода */
+        #input-panel { display: none; margin-top: 25px; animation: slideDown 0.3s ease; }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .debt-card { border: 1px solid #E2E8F0; border-radius: 12px; padding: 0; overflow: hidden; margin-bottom: 15px; }
+        .debt-header { background: #F8FAFC; padding: 10px 20px; border-bottom: 1px solid #E2E8F0; display: flex; align-items: center; justify-content: space-between; font-weight: 600; cursor: pointer; }
+        .debt-body { padding: 15px 20px; }
+
+        .btn-add { background: var(--accent-red); color: white; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 600; }
+        .btn-writeoff { background: white; color: #48BB78; border: 2px solid #48BB78; padding: 10px 20px; border-radius: 10px; font-weight: 600; }
     </style>
 </head>
 <body>
 
-    <div class="sidebar">
-        <h5><i class="bi bi-gear-fill"></i> Настройки</h5>
+    <div class="sidebar" id="sidebar">
+        <div class="toggle-sidebar" onclick="document.getElementById('sidebar').classList.toggle('collapsed')">
+            <i class="bi bi-chevron-double-left"></i>
+        </div>
+
+        <h5><i class="bi bi-gear-fill text-muted"></i> <span class="sidebar-text">Настройки</span></h5>
         
         {% if is_admin %}
-            <a href="/logout?slug={{ room.slug }}" class="btn-logout">Выйти</a>
-            <button class="nav-btn"><span><i class="bi bi-controller"></i> НАСТРОЙКА ИГР</span> <i class="bi bi-chevron-right"></i></button>
-            <button class="nav-btn"><span><i class="bi bi-person-walking"></i> УПРАЖНЕНИЯ</span> <i class="bi bi-chevron-right"></i></button>
-            <button class="nav-btn"><span><i class="bi bi-person-fill"></i> УЧАСТНИКИ</span> <i class="bi bi-chevron-right"></i></button>
-        {% else %}
-            <form action="/login" method="POST" class="mt-3">
-                <input type="hidden" name="slug" value="{{ room.slug }}">
-                <input type="password" name="password" class="form-control mb-2" placeholder="Пароль">
-                <button class="btn btn-dark w-100 btn-sm">Войти</button>
-            </form>
+            <a href="/logout?slug={{ room.slug }}" class="btn btn-sm btn-outline-secondary btn-logout mb-4">Выйти</a>
+            <button class="nav-btn"><span class="sidebar-text"><i class="bi bi-controller"></i> НАСТРОЙКА ИГР</span> <i class="bi bi-chevron-right sidebar-text"></i></button>
+            <button class="nav-btn"><span class="sidebar-text"><i class="bi bi-person-walking"></i> УПРАЖНЕНИЯ</span> <i class="bi bi-chevron-right sidebar-text"></i></button>
+            <button class="nav-btn"><span class="sidebar-text"><i class="bi bi-person-fill"></i> УЧАСТНИКИ</span> <i class="bi bi-chevron-right sidebar-text"></i></button>
         {% endif %}
     </div>
 
     <div class="main-content">
         <h1 class="room-title">💪 {{ room.title }}</h1>
 
-        <div class="d-flex gap-4 mb-4 border-bottom pb-2">
-            <span class="text-danger fw-bold border-bottom border-danger border-3 pb-2">📝 Ввод</span>
-            <span class="text-muted">🎲 Игра</span>
+        <div class="d-flex gap-4 mb-4 border-bottom">
+            <div id="tab-vvod-btn" class="tab-btn active" onclick="showTab('vvod')">📝 Ввод</div>
+            <div id="tab-igra-btn" class="tab-btn" onclick="showTab('igra')">🎲 Игра</div>
         </div>
 
-        {% if is_admin %}
-        <div class="mb-5">
-            <label class="text-muted small d-block mb-2">Кому?</label>
-            <form action="/add_log" method="POST">
+        <div id="tab-vvod">
+            <form action="/add_log" method="POST" id="mainForm">
                 <input type="hidden" name="slug" value="{{ room.slug }}">
-                <select name="profile_id" class="form-select form-select-lg mb-3" style="background-color: #EDF2F7; border: none;">
+                <input type="hidden" name="ex_name" id="selected_ex_input">
+                <input type="hidden" name="action" id="action_type" value="add">
+
+                <label class="text-muted small d-block mb-2">Кому?</label>
+                <select name="profile_id" id="profile_id" class="form-select form-select-lg mb-3" style="background-color: #EDF2F7; border: none;" onchange="checkSelection()">
+                    <option value="" disabled selected>Выберите человека...</option>
                     {% for p in profiles %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}
                 </select>
 
                 <div class="ex-grid">
                     {% for ex in ex_types %}
-                        <button type="submit" name="ex_name" value="{{ ex.name }}" class="ex-btn">{{ ex.name }}</button>
+                        <button type="button" class="ex-btn" onclick="selectEx(this, '{{ ex.name }}')">{{ ex.name }}</button>
                     {% endfor %}
                 </div>
-                
-                <div class="mt-3">
-                    <input type="text" name="value" class="form-control w-25 d-inline-block" placeholder="Значение">
-                    <input type="checkbox" name="writeoff" value="1" id="wo"> <label for="wo">Списать</label>
+
+                <div id="input-panel">
+                    <div class="mt-4">
+                        <label class="text-muted small d-block mb-2">Сколько?</label>
+                        <input type="text" name="value" class="form-control form-control-lg mb-3 w-50" placeholder="0">
+                        <div class="d-flex gap-2">
+                            <button type="submit" onclick="document.getElementById('action_type').value='add'" class="btn-add">➕ Добавить</button>
+                            <button type="submit" onclick="document.getElementById('action_type').value='writeoff'" class="btn-writeoff">✅ Списать</button>
+                        </div>
+                    </div>
                 </div>
             </form>
         </div>
-        {% endif %}
 
-        <h4 class="mb-4">📊 Текущие долги</h4>
-        
+        <div id="tab-igra" style="display: none;">
+            <div class="alert alert-warning py-3">
+                <i class="bi bi-exclamation-triangle-fill"></i> Внимание! Выберите победителей игры, чтобы распределить долги.
+            </div>
+            <p class="text-muted">Здесь будет список активных игр и выбор победителей...</p>
+        </div>
+
+        <h4 class="mt-5 mb-4">📊 Текущие долги</h4>
         {% for name, debts in summary.items() %}
         <div class="debt-card">
-            <div class="debt-header">
-                <i class="bi bi-person-fill text-primary"></i> {{ name }}
+            <div class="debt-header" onclick="this.nextElementSibling.classList.toggle('d-none')">
+                <span><i class="bi bi-person-fill text-primary"></i> {{ name }}</span>
+                <i class="bi bi-chevron-down text-muted"></i>
             </div>
             <div class="debt-body">
                 {% for ex, total in debts.items() %}
@@ -107,5 +132,31 @@
         {% endfor %}
     </div>
 
+    <script>
+        // Переключение вкладок
+        function showTab(tab) {
+            document.getElementById('tab-vvod').style.display = (tab === 'vvod') ? 'block' : 'none';
+            document.getElementById('tab-igra').style.display = (tab === 'igra') ? 'block' : 'none';
+            document.getElementById('tab-vvod-btn').classList.toggle('active', tab === 'vvod');
+            document.getElementById('tab-igra-btn').classList.toggle('active', tab === 'igra');
+        }
+
+        // Выбор упражнения
+        function selectEx(btn, name) {
+            document.querySelectorAll('.ex-btn').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            document.getElementById('selected_ex_input').value = name;
+            checkSelection();
+        }
+
+        // Проверка: выбран ли человек и упражнение
+        function checkSelection() {
+            const profile = document.getElementById('profile_id').value;
+            const ex = document.getElementById('selected_ex_input').value;
+            if (profile && ex) {
+                document.getElementById('input-panel').style.display = 'block';
+            }
+        }
+    </script>
 </body>
 </html>
