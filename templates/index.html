@@ -232,10 +232,11 @@
         }
 
         function selectExercise(el, name) {
-            document.querySelectorAll('.btn-check-custom').forEach(b => b.classList.remove('selected-ex'));
-            el.classList.add('selected-ex');
-            document.getElementById('vvod-controls').style.display = 'block';
-        }
+    document.querySelectorAll('.btn-check-custom').forEach(b => b.classList.remove('selected-ex'));
+    el.classList.add('selected-ex');
+    document.getElementById('selected-ex-name').value = name; // Записываем имя упражнения в скрытое поле
+    document.getElementById('vvod-controls').style.display = 'block';
+}
 
         function handleDistribute() {
             const winners = document.getElementById('winners-select').selectedOptions;
