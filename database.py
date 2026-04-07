@@ -2,13 +2,11 @@ import os
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
-# Ссылка на базу из настроек Railway
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
 def get_db_connection():
     return psycopg2.connect(DATABASE_URL, sslmode='require')
 
-# --- 1. ЛОГИКА КОМНАТ ---
 def get_room(slug):
     conn = get_db_connection()
     cur = conn.cursor(cursor_factory=RealDictCursor)
@@ -34,7 +32,6 @@ def create_room(slug, title, password, tg_chat_id=None):
         cur.close()
         conn.close()
 
-# --- 2. ПОЛУЧЕНИЕ ДАННЫХ ---
 def get_data(table, room_id, order_by="id"):
     conn = get_db_connection()
     cur = conn.cursor(cursor_factory=RealDictCursor)
@@ -51,8 +48,6 @@ def get_data(table, room_id, order_by="id"):
         """
         cur.execute(query, (room_id,))
     else:
-        # Сортировка по ID DESC, чтобы новые были сверху (если форма внизу) 
-        # или просто ID, если форму перенесли вверх. Оставляем стандартную.
         query = f"SELECT * FROM {table} WHERE room_id = %s ORDER BY {order_by}"
         cur.execute(query, (room_id,))
     
@@ -61,7 +56,6 @@ def get_data(table, room_id, order_by="id"):
     conn.close()
     return res
 
-# --- 3. РЕДАКТИРОВАНИЕ ---
 def add_game_preset(room_id, game_name, ex_name, val, unit_type):
     conn = get_db_connection()
     cur = conn.cursor()
@@ -85,13 +79,11 @@ def add_exercise_type(room_id, name, unit_type):
 def add_profile(room_id, name):
     conn = get_db_connection()
     cur = conn.cursor()
-    # ИСПРАВЛЕНО: порядок room_id, name
     cur.execute("INSERT INTO profiles (room_id, name) VALUES (%s, %s)", (room_id, name))
     conn.commit()
     cur.close()
     conn.close()
 
-# ФУНКЦИИ УДАЛЕНИЯ (теперь вызываются в website.py)
 def delete_game_preset(id_val):
     conn = get_db_connection()
     cur = conn.cursor()
@@ -116,7 +108,6 @@ def delete_profile(id_val):
     cur.close()
     conn.close()
 
-# --- 4. РАБОТА С ЛОГАМИ ---
 def add_log(p_id, ex_name, amount, room_id):
     conn = get_db_connection()
     cur = conn.cursor()
@@ -147,7 +138,7 @@ def get_profile_name(p_id):
     return res[0] if res else "Кто-то"
     
 def delete_last_log(room_id):
-    conn = get_db_connection() # ИСПРАВЛЕНО
+    conn = get_db_connection()
     cursor = conn.cursor()
     try:
         cursor.execute("""
@@ -161,7 +152,6 @@ def delete_last_log(room_id):
         """, (room_id,))
         conn.commit()
     except Exception as e:
-        print(f"Ошибка при удалении лога: {e}")
         conn.rollback()
     finally:
         cursor.close()
