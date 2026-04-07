@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Workout SaaS: Создать комнату</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .container {
+            width: 90%;
+            max-width: 900px;
+        }
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        .header h1 {
+            color: #2D3748;
+            font-size: 32px;
+            font-weight: 700;
+            margin: 0;
+        }
+        .card {
+            background: #ffffff;
+            border: 1px solid #E2E8F0;
+            border-radius: 12px;
+            padding: 30px;
+        }
+        .form-group {
+            margin-bottom: 25px;
+            position: relative;
+        }
+        .label-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        label {
+            font-size: 14px;
+            color: #718096;
+        }
+        .help-icon {
+            color: #A0AEC0;
+            font-size: 14px;
+            cursor: help;
+        }
+        input {
+            width: 100%;
+            padding: 14px 18px;
+            background-color: #EDF2F7;
+            border: 1px solid transparent;
+            border-radius: 10px;
+            font-size: 16px;
+            color: #2D3748;
+            box-sizing: border-box;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        input:focus {
+            border-color: #CBD5E0;
+        }
+        .password-toggle {
+            position: absolute;
+            right: 18px;
+            bottom: 14px;
+            color: #2D3748;
+            cursor: pointer;
+        }
+        .btn-submit {
+            background-color: #FF5A50; /* Тот самый красный цвет */
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 12px 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .btn-submit:hover {
+            background-color: #E54E45;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <span>🚀</span>
+        <h1>Workout SaaS: Создать комнату</h1>
+    </div>
+
+    <form action="/create_room" method="POST" class="card">
+        <div class="form-group">
+            <div class="label-row">
+                <label>Название (напр: Моя Качалка)</label>
+            </div>
+            <input type="text" name="title" required>
+        </div>
+
+        <div class="form-group">
+            <div class="label-row">
+                <label>Придумайте адрес для ссылки (напр: matrix, kachalka77)</label>
+                <i class="far fa-question-circle help-icon" title="Этот текст будет в конце ссылки вашего сайта"></i>
+            </div>
+            <input type="text" name="slug" required>
+        </div>
+
+        <div class="form-group">
+            <div class="label-row">
+                <label>Пароль админа</label>
+            </div>
+            <input type="password" name="password" id="passwordField" required>
+            <i class="far fa-eye password-toggle" onclick="togglePass()"></i>
+        </div>
+
+        <div class="form-group">
+            <div class="label-row">
+                <label>ID чата в Telegram (необязательно)</label>
+                <i class="far fa-question-circle help-icon" title="Для отправки уведомлений о долгах"></i>
+            </div>
+            <input type="text" name="tg_id">
+        </div>
+
+        <button type="submit" class="btn-submit">Создать комнату</button>
+    </form>
+</div>
+
+<script>
+    function togglePass() {
+        const passInput = document.getElementById('passwordField');
+        passInput.type = passInput.type === 'password' ? 'text' : 'password';
+    }
+</script>
+
+</body>
+</html>
