@@ -111,7 +111,9 @@ def login():
 def add_log():
     slug = request.form.get('slug')
     room = db.get_room(slug)
-    if not session.get(f"auth_{room['id']}"): 
+    
+    # ИСПРАВЛЕНИЕ ТУТ: меняем ['id'] на ['room_id']
+    if not room or not session.get(f"auth_{room['room_id']}"): 
         return "Доступ запрещен", 403
     
     p_id = request.form.get('profile_id')
@@ -119,14 +121,15 @@ def add_log():
     val = request.form.get('value')
     is_writeoff = 'writeoff' in request.form
     
-    # Логика конвертации (из твоего кода)
-    ex_type_info = db.get_ex_type(ex_name, room['id'])
+    # И ТУТ: меняем ['id'] на ['room_id']
+    ex_type_info = db.get_ex_type(ex_name, room['room_id'])
     is_time = (ex_type_info == 'time')
     
     amt = time_to_seconds(val) if is_time else int(val)
     final_amt = -amt if is_writeoff else amt
     
-    db.add_log(p_id, ex_name, final_amt, room['id'])
+    # И ТУТ: меняем ['id'] на ['room_id']
+    db.add_log(p_id, ex_name, final_amt, room['room_id'])
     
     # Уведомление в ТГ
     p_name = db.get_profile_name(p_id)
