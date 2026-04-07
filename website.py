@@ -44,14 +44,18 @@ def index(slug=None):
     games = db.get_data("games_presets", room_actual_id)
     logs = db.get_data("workout_logs", room_actual_id)
     
-    summary = {}
+    # 1. Инициализируем именами всех участников из базы
+    summary = {p['name']: {} for p in profiles}
+    
     ex_map = {ex['name']: ex['unit_type'] for ex in ex_types}
     ex_icons = {ex['name']: ("🕒" if ex['unit_type'] == 'time' else "💪") for ex in ex_types}
 
+    # 2. Суммируем логи только для существующих в списке имен
     for l in logs:
         name, ex, amt = l['profile_name'], l['exercise_type'], l['amount']
-        summary.setdefault(name, {}).setdefault(ex, 0)
-        summary[name][ex] += amt
+        if name in summary:
+            summary[name].setdefault(ex, 0)
+            summary[name][ex] += amt
 
     is_admin = session.get(f"auth_{room['room_id']}")
     last_log = logs[0] if logs else None 
