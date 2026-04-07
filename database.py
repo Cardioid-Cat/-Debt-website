@@ -152,25 +152,30 @@ def delete_last_log(room_id):
         cursor.close()
         conn.close()
         
-def add_game_preset(room_id, name):
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("INSERT INTO games_presets (room_id, name) VALUES (?, ?)", (room_id, name))
+def add_game_preset(room_id, game_name, ex_name, val, unit_type):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        INSERT INTO games_presets (room_id, game_name, ex_name, val, unit_type) 
+        VALUES (%s, %s, %s, %s, %s)
+    """, (room_id, game_name, ex_name, val, unit_type))
     conn.commit()
+    cur.close()
     conn.close()
 
 def add_exercise_type(room_id, name, unit_type):
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("INSERT INTO exercise_types (room_id, name, unit_type) VALUES (?, ?, ?)", 
-                   (room_id, name, unit_type))
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("INSERT INTO exercise_types (room_id, name, unit_type) VALUES (%s, %s, %s)", 
+                (room_id, name, unit_type))
     conn.commit()
+    cur.close()
     conn.close()
 
 def add_profile(room_id, name):
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("INSERT INTO profiles (room_id, name) VALUES (?, ?)", (room_id, name))
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("INSERT INTO profiles (room_id, name) VALUES (%s, %s)", (name, room_id))
     conn.commit()
+    cur.close()
     conn.close()
-    
