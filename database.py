@@ -105,3 +105,22 @@ def add_log(p_id, ex_name, amount, room_id):
     conn.commit()
     cur.close()
     conn.close()
+
+
+def get_ex_type(name, room_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT unit_type FROM exercise_types WHERE name = %s AND room_id = %s", (name, room_id))
+    res = cur.fetchone()
+    cur.close()
+    conn.close()
+    return res[0] if res else 'count'
+
+def get_profile_name(p_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT name FROM profiles WHERE id = %s", (p_id,))
+    res = cur.fetchone()
+    cur.close()
+    conn.close()
+    return res[0] if res else "Кто-то"
