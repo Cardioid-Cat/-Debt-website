@@ -11,14 +11,33 @@
         body { background: #FFFFFF; font-family: 'Inter', sans-serif; display: flex; min-height: 100vh; margin: 0; }
         
         /* Sidebar */
-        .sidebar { width: 260px; background: var(--sidebar-bg); border-right: 1px solid var(--border-color); padding: 25px 15px; display: flex; flex-direction: column; transition: 0.3s; position: relative; }
-        .sidebar.collapsed { width: 80px; }
-        .sidebar.collapsed .sidebar-hide { display: none; }
+        .sidebar { 
+            width: 260px; 
+            background: var(--sidebar-bg); 
+            border-right: 1px solid var(--border-color); 
+            padding: 25px 15px; 
+            display: flex; 
+            flex-direction: column; 
+            transition: width 0.3s ease; 
+            position: relative;
+            overflow: hidden; /* Текст не будет вылезать за границы */
+            white-space: nowrap;
+        }
+        .sidebar.collapsed { width: 85px; padding: 25px 12px; }
         
-        .toggle-btn { position: absolute; right: -15px; top: 20px; background: #fff; border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer; z-index: 100; padding: 2px 5px; }
+        /* Скрытие текста */
+        .sidebar.collapsed .sidebar-text, 
+        .sidebar.collapsed .sidebar-hide,
+        .sidebar.collapsed .undo-section { display: none !important; }
+        .sidebar.collapsed h5 { visibility: hidden; }
 
-        .nav-link-custom { background: #fff; border: 1px solid var(--border-color); border-radius: 12px; padding: 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; text-decoration: none; color: #2D3748; font-weight: 500; font-size: 0.85rem; }
-        
+        .toggle-btn { position: absolute; right: 5px; top: 20px; background: #fff; border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer; z-index: 100; padding: 2px 5px; }
+
+        .nav-link-custom { background: #fff; border: 1px solid var(--border-color); border-radius: 12px; padding: 12px; margin-bottom: 10px; display: flex; align-items: center; text-decoration: none; color: #2D3748; font-weight: 500; font-size: 0.85rem; }
+        .sidebar.collapsed .nav-link-custom { justify-content: center; padding: 12px 0; border: none; background: transparent; }
+        .nav-link-custom i:first-child { margin-right: 10px; }
+        .sidebar.collapsed .nav-link-custom i:first-child { margin-right: 0; font-size: 1.3rem; }
+
         /* Tabs */
         .tab-btn { cursor: pointer; padding-bottom: 10px; font-weight: 700; color: #A0AEC0; border-bottom: 3px solid transparent; }
         .tab-btn.active { color: var(--accent-red); border-bottom-color: var(--accent-red); }
@@ -44,28 +63,33 @@
             <i id="toggle-icon" class="bi bi-chevron-double-left"></i>
         </button>
 
-        <div class="sidebar-hide h-100 d-flex flex-column">
-            <h5 class="mb-4"><i class="bi bi-gear"></i> Настройки</h5>
+        <div class="h-100 d-flex flex-column">
+            <h5 class="mb-4 sidebar-text"><i class="bi bi-gear"></i> Настройки</h5>
             
             {% if is_admin %}
-                <a href="/logout?slug={{ room.slug }}" class="btn btn-sm btn-light mb-4 border w-100">Выйти</a>
+                <a href="/logout?slug={{ room.slug|urlencode }}" class="btn btn-sm btn-light mb-4 border sidebar-text">Выйти</a>
                 
-                <a href="#" class="nav-link-custom"><span>🎮 НАСТРОЙКА ИГР</span> <i class="bi bi-chevron-right"></i></a>
-                <a href="#" class="nav-link-custom"><span>🏃 УПРАЖНЕНИЯ</span> <i class="bi bi-chevron-right"></i></a>
-                <a href="#" class="nav-link-custom"><span>👤 УЧАСТНИКИ</span> <i class="bi bi-chevron-right"></i></a>
+                <a href="#" class="nav-link-custom"><i class="bi bi-controller"></i> <span class="sidebar-text">НАСТРОЙКА ИГР</span></a>
+                <a href="#" class="nav-link-custom"><i class="bi bi-person-walking"></i> <span class="sidebar-text">УПРАЖНЕНИЯ</span></a>
+                <a href="#" class="nav-link-custom"><i class="bi bi-person-fill"></i> <span class="sidebar-text">УЧАСТНИКИ</span></a>
 
                 <div class="undo-section">
-                    <p class="small text-muted mb-1" style="font-size: 0.75rem;">{{ last_action_text or 'Нет действий' }}</p>
-                    <button class="btn-undo" data-bs-toggle="modal" data-bs-target="#confirmUndo">
+                    <p class="small text-muted mb-1 sidebar-text" style="font-size: 0.75rem;">{{ last_action_text or 'Нет действий' }}</p>
+                    <button class="btn-undo sidebar-text" data-bs-toggle="modal" data-bs-target="#confirmUndo">
                         <i class="bi bi-arrow-left-short"></i> Отменить
                     </button>
                 </div>
             {% else %}
-                <div class="card border-0 bg-white p-3 shadow-sm mb-4" style="border-radius: 12px;">
+                <div class="card border-0 bg-white p-3 shadow-sm mb-4 sidebar-hide" style="border-radius: 12px;">
                     <p class="text-muted small mb-2">🔑 Вход для админа</p>
                     <form action="/login" method="POST">
                         <input type="hidden" name="slug" value="{{ room.slug }}">
-                        <input type="password" name="password" class="form-control form-control-sm mb-2" placeholder="Пароль">
+                        <div class="input-group mb-2">
+                            <input type="password" name="password" id="adminPassword" class="form-control form-control-sm" placeholder="Пароль" style="border-right: none;">
+                            <span class="input-group-text bg-white" style="border-left: none; cursor: pointer;" onclick="togglePasswordVisibility()">
+                                <i class="bi bi-eye-slash" id="togglePasswordIcon"></i>
+                            </span>
+                        </div>
                         <button class="btn btn-dark btn-sm w-100">Войти</button>
                     </form>
                 </div>
@@ -125,7 +149,7 @@
 
         <h4 class="mt-5 mb-3">🥇 Зал славы</h4>
         <div class="card border-0 shadow-sm p-3 mb-4" style="border-radius: 15px; background: linear-gradient(135deg, #fff 0%, #f9fafb 100%);">
-            <div class="text-muted small">Здесь будут лучшие атлеты...</div>
+            <div class="text-muted small">Здесь будут лучшие победители...</div>
         </div>
 
         <h4 class="mt-4 mb-3">📊 Текущие долги</h4>
@@ -182,6 +206,18 @@
             icon.className = sb.classList.contains('collapsed') ? 'bi bi-chevron-double-right' : 'bi bi-chevron-double-left';
         }
 
+        function togglePasswordVisibility() {
+            const passwordInput = document.getElementById('adminPassword');
+            const icon = document.getElementById('togglePasswordIcon');
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                icon.classList.replace('bi-eye-slash', 'bi-eye');
+            } else {
+                passwordInput.type = 'password';
+                icon.classList.replace('bi-eye', 'bi-eye-slash');
+            }
+        }
+
         function switchMainTab(tab) {
             document.getElementById('view-vvod').style.display = tab === 'vvod' ? 'block' : 'none';
             document.getElementById('view-igra').style.display = tab === 'igra' ? 'block' : 'none';
@@ -201,12 +237,10 @@
             error.style.display = (winners.length === 0) ? 'block' : 'none';
         }
 
-        // Заглушка отправки данных
         function submitData(action) {
             const user = document.getElementById('user-select').value;
             const val = document.getElementById('vvod-value').value;
             if(!user || !val) { alert("Выберите пользователя и введите значение"); return; }
-            // Тут fetch запрос на /add_log
             alert("Действие: " + action + " для " + user);
         }
     </script>
