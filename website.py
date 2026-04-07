@@ -46,7 +46,7 @@ def index(slug=None):
     summary = {}
     ex_map = {ex['name']: ex['unit_type'] for ex in ex_types}
     
-    # ФОТО 8: Мапа для иконок
+    # Мапа для иконок в таблице долгов
     ex_icons = {ex['name']: ("🕒" if ex['unit_type'] == 'time' else "💪") for ex in ex_types}
 
     for l in logs:
@@ -67,7 +67,7 @@ def index(slug=None):
                            games=games, 
                            summary=summary, 
                            ex_map=ex_map,
-                           ex_icons=ex_icons, # Передаем иконки в шаблон
+                           ex_icons=ex_icons,
                            is_admin=is_admin,
                            last_action_text=last_action_text)
 
@@ -81,20 +81,17 @@ def add_game():
         val_raw = request.form.get('val', '').strip()
         
         if not name or not val_raw:
-            flash("Название игры и значение не могут быть пустыми")
+            flash("Ошибка: Название игры и значение не могут быть пустыми")
             return redirect(url_for('index', room=slug))
 
         u_type = db.get_ex_type(ex_name, room['room_id'])
         val_numeric = time_to_seconds(val_raw) if u_type == 'time' else int(val_raw)
 
-        # Валидация на дубликаты (Фото 6)
+        # Проверка на дубликаты
         existing_games = db.get_data("games_presets", room['room_id'])
         for g in existing_games:
-            if g['name'].lower() == name.lower():
+            if g['game_name'].lower() == name.lower():
                 flash("Игра с таким названием уже существует")
-                return redirect(url_for('index', room=slug))
-            if g['exercise_type'] == ex_name and g['amount'] == val_numeric:
-                flash(f"Такое упражнение ({ex_name}) с таким объемом уже есть")
                 return redirect(url_for('index', room=slug))
 
         db.add_game_preset(room['room_id'], name, ex_name, val_numeric, u_type)
@@ -110,7 +107,7 @@ def add_exercise():
         if name: 
             db.add_exercise_type(room['room_id'], name, u_type)
         else:
-            flash("Название упражнения не может быть пустым")
+            flash("Ошибка: Название упражнения не может быть пустым!")
     return redirect(url_for('index', room=slug))
 
 @website.route('/add_profile', methods=['POST'])
@@ -122,7 +119,7 @@ def add_profile():
         if name: 
             db.add_profile(room['room_id'], name)
         else:
-            flash("Имя участника не может быть пустым")
+            flash("Ошибка: Имя не может быть пустым!")
     return redirect(url_for('index', room=slug))
 
 @website.route('/delete_<type>/<int:id_val>')
@@ -153,9 +150,11 @@ def add_log():
     val_raw = request.form.get('value', '').strip()
     action_type = request.form.get('action_type') 
     
+    if not val_raw:
+        flash("Введите количество или время")
+        return redirect(url_for('index', room=slug))
+
     ex_type_info = db.get_ex_type(ex_name, room['room_id'])
-    
-    # Фото 7: Корректная обработка времени/количества
     amt = time_to_seconds(val_raw) if ex_type_info == 'time' else int(val_raw)
     
     final_amt = -amt if action_type == 'writeoff' else amt
@@ -164,7 +163,6 @@ def add_log():
     p_name = db.get_profile_name(p_id)
     action_txt = "списал(а)" if action_type == 'writeoff' else "получил(а) долг"
     
-    # Отправляем в уведомление то, что ввел пользователь (например 1:30)
     send_tg_notification(room, f"⚖️ {p_name} {action_txt}: {ex_name} ({val_raw})")
     return redirect(url_for('index', room=slug))
 
