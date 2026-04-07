@@ -114,6 +114,17 @@
     </div>
 
     <div class="main-content flex-grow-1 p-5">
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}
+            {% for message in messages %}
+              <div class="alert alert-danger alert-dismissible fade show" role="alert" style="border-radius: 12px;">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
         <h1 class="fw-bold mb-4">💪 {{ room.title }}</h1>
 
         {% if is_admin %}
@@ -178,8 +189,16 @@
                             {% if val != 0 %}
                                 {% set has_debts = true %}
                                 <div class="d-flex justify-content-between border-bottom py-2">
-                                    <span class="text-muted">{{ ex }}</span>
-                                    <span class="fw-bold">{% if ex_map[ex] == 'time' %}{{ val//60 }}:{{ "%02d"|format(val%60) }}{% else %}{{ val }}{% endif %}</span>
+                                    <span class="text-muted">
+                                        {{ ex_icons[ex] or '💪' }} {{ ex }}
+                                    </span>
+                                    <span class="fw-bold">
+                                        {% if ex_map[ex] == 'time' %}
+                                            {{ val//60 }}:{{ "%02d"|format(val%60) }}
+                                        {% else %}
+                                            {{ val }}
+                                        {% endif %}
+                                    </span>
                                 </div>
                             {% endif %}
                         {% endfor %}
@@ -191,33 +210,8 @@
         </div>
     </div>
 
-    <div class="modal fade" id="deleteConfirmModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered modal-sm">
-            <div class="modal-content border-0 shadow" style="border-radius: 15px;">
-                <div class="modal-body text-center p-4">
-                    <h6 class="mb-3">Удалить "<span id="delItemName"></span>"?</h6>
-                    <div class="d-flex gap-2">
-                        <a id="confirmDelLink" href="#" class="btn btn-danger w-100 btn-sm text-decoration-none">Да</a>
-                        <button class="btn btn-light border w-100 btn-sm" data-bs-dismiss="modal">Нет</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal fade" id="confirmUndo" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered modal-sm">
-            <div class="modal-content border-0 shadow" style="border-radius: 15px;">
-                <div class="modal-body text-center p-4">
-                    <h6 class="mb-3">Отменить действие?</h6>
-                    <div class="d-flex gap-2">
-                        <a href="/undo/{{ room.slug }}" class="btn btn-danger w-100 btn-sm text-decoration-none">Да</a>
-                        <button class="btn btn-light border w-100 btn-sm" data-bs-dismiss="modal">Нет</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+    <div class="modal fade" id="deleteConfirmModal" tabindex="-1">...</div>
+    <div class="modal fade" id="confirmUndo" tabindex="-1">...</div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
