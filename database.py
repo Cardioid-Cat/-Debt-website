@@ -130,17 +130,18 @@ def get_profile_name(p_id):
     return res[0] if res else "Кто-то"
     
 def delete_last_log(room_id):
-    """Удаляет самую последнюю запись в логах для конкретной комнаты"""
-    conn = get_connection() # Используй свою функцию подключения к БД
+    """Удаляет самую последнюю запись в логах для конкретной комнаты по времени"""
+    conn = get_connection()
     cursor = conn.cursor()
     try:
-        # Находим ID последней записи для этой комнаты
+        # Используем created_at для сортировки, как в твоем SQL-запросе
         cursor.execute("""
             DELETE FROM workout_logs 
             WHERE id = (
                 SELECT id FROM workout_logs 
-                WHERE room_id = ? 
-                ORDER BY timestamp DESC LIMIT 1
+                WHERE room_id = %s 
+                ORDER BY created_at DESC 
+                LIMIT 1
             )
         """, (room_id,))
         conn.commit()
@@ -148,5 +149,6 @@ def delete_last_log(room_id):
         print(f"Ошибка при удалении лога: {e}")
         conn.rollback()
     finally:
+        cursor.close()
         conn.close()
         
