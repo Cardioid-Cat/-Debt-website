@@ -19,18 +19,22 @@ def get_room(slug):
     conn.close()
     return res
 
-def create_room(slug, title, password, tg_token=None, tg_chat_id=None):
-    """Создание новой комнаты с привязкой бота сразу"""
+def create_room(slug, title, password, tg_chat_id=None):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute(
-        """INSERT INTO rooms (slug, title, password, tg_token, tg_chat_id) 
-           VALUES (%s, %s, %s, %s, %s)""",
-        (slug, title, password, tg_token, tg_chat_id)
-    )
-    conn.commit()
-    cur.close()
-    conn.close()
+    try:
+        cur.execute(
+            """INSERT INTO rooms (slug, title, password, tg_chat_id) 
+               VALUES (%s, %s, %s, %s)""",
+            (slug, title, password, tg_chat_id)
+        )
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        raise e
+    finally:
+        cur.close()
+        conn.close()
 
 # --- 2. ПОЛУЧЕНИЕ ВСЕХ ДАННЫХ КОМНАТЫ ---
 def get_data(table, room_id, order_by="id"):
