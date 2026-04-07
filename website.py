@@ -88,7 +88,7 @@ def handle_create_room():
     
     try:
         db.create_room(slug, title, password, tg_id if tg_id else None)
-        return redirect(url_for('index', room=slug))
+        return redirect(f"/{slug}")
     except Exception as e:
         flash(f"Ошибка: Адрес '{slug}' уже занят или база недоступна.")
         return redirect(url_for('index'))
