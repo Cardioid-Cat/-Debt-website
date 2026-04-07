@@ -33,9 +33,13 @@ def seconds_to_str(sec):
 # --- ОСНОВНЫЕ МАРШРУТЫ ---
 
 @website.route('/')
-def index():
-    slug = request.args.get('room')
-    # Если комната не указана — показываем страницу создания (регистрации)
+@website.route('/<slug>') # Добавили эту строку (теперь работает /vova)
+def index(slug=None): # Добавили slug=None
+    # Если slug не пришел в адресе, пробуем взять из параметров ?room=
+    if not slug:
+        slug = request.args.get('room')
+    
+    # Если адреса всё еще нет — показываем страницу создания
     if not slug:
         return render_template('create_room.html')
     
