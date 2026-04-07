@@ -128,3 +128,25 @@ def get_profile_name(p_id):
     cur.close()
     conn.close()
     return res[0] if res else "Кто-то"
+    
+def delete_last_log(room_id):
+    """Удаляет самую последнюю запись в логах для конкретной комнаты"""
+    conn = get_connection() # Используй свою функцию подключения к БД
+    cursor = conn.cursor()
+    try:
+        # Находим ID последней записи для этой комнаты
+        cursor.execute("""
+            DELETE FROM workout_logs 
+            WHERE id = (
+                SELECT id FROM workout_logs 
+                WHERE room_id = ? 
+                ORDER BY timestamp DESC LIMIT 1
+            )
+        """, (room_id,))
+        conn.commit()
+    except Exception as e:
+        print(f"Ошибка при удалении лога: {e}")
+        conn.rollback()
+    finally:
+        conn.close()
+        
