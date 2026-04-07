@@ -107,27 +107,33 @@
         </div>
 
         <div id="view-vvod">
-            <label class="text-muted small">Кому?</label>
-            <select class="form-select form-select-lg mb-3 border-0 bg-light" id="user-select" style="border-radius: 12px;">
-                <option value="" disabled selected>Выберите человека...</option>
-                {% for p in profiles %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}
-            </select>
+    <form action="/add_log" method="POST" id="vvod-form">
+        <input type="hidden" name="slug" value="{{ room.slug }}">
+        <input type="hidden" name="action_type" id="action_type" value="add">
+        
+        <label class="text-muted small">Кому?</label>
+        <select class="form-select form-select-lg mb-3 border-0 bg-light" name="profile_id" id="user-select" style="border-radius: 12px;" required>
+            <option value="" disabled selected>Выберите человека...</option>
+            {% for p in profiles %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}
+        </select>
 
-            <div class="ex-grid mb-4">
-                {% for ex in ex_types %}
-                    <div class="btn-check-custom" onclick="selectExercise(this, '{{ ex.name }}')">{{ ex.name }}</div>
-                {% endfor %}
-            </div>
+        <input type="hidden" name="ex_name" id="selected-ex-name" required>
+        <div class="ex-grid mb-4">
+            {% for ex in ex_types %}
+                <div class="btn-check-custom" onclick="selectExercise(this, '{{ ex.name }}')">{{ ex.name }}</div>
+            {% endfor %}
+        </div>
 
-            <div id="vvod-controls" style="display:none; animation: fadeIn 0.3s;">
-                <label class="small text-muted">Сколько?</label>
-                <input type="text" id="vvod-value" class="form-control form-control-lg mb-3" placeholder="0">
-                <div class="d-flex gap-2">
-                    <button class="btn-main" onclick="submitData('add')">➕ Добавить долг</button>
-                    <button class="btn-outline-green px-4" onclick="submitData('writeoff')"><i class="bi bi-check2"></i> Списать</button>
-                </div>
+        <div id="vvod-controls" style="display:none;">
+            <label class="small text-muted">Сколько?</label>
+            <input type="text" name="value" id="vvod-value" class="form-control form-control-lg mb-3" placeholder="0" required>
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn-main" onclick="document.getElementById('action_type').value='add'">➕ Добавить долг</button>
+                <button type="submit" class="btn-outline-green px-4" onclick="document.getElementById('action_type').value='writeoff'"><i class="bi bi-check2"></i> Списать</button>
             </div>
         </div>
+    </form>
+</div>
 
         <div id="view-igra" style="display:none;">
             <label class="small text-muted">Игра?</label>
