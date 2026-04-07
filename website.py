@@ -72,17 +72,22 @@ def index():
 
 @website.route('/create_room', methods=['POST'])
 def handle_create_room():
-    title = request.form.get('title')
-    slug = request.form.get('slug').lower().strip()
-    password = request.form.get('password')
-    tg_id = request.form.get('tg_id')
+    title = request.form.get('title', '').strip()
+    slug = request.form.get('slug', '').lower().strip()
+    password = request.form.get('password', '').strip()
+    tg_id = request.form.get('tg_id', '').strip()
+    
+    # ПРОВЕРКА: если после удаления пробелов поля пустые
+    if not title or not slug or not password:
+        flash("⚠️ Поля 'Название', 'Адрес' и 'Пароль' не могут быть пустыми или состоять только из пробелов!")
+        return redirect(url_for('index'))
     
     try:
-        db.create_room(slug, title, password, tg_id)
-        # После создания сразу отправляем в новую комнату
+        db.create_room(slug, title, password, tg_id if tg_id else None)
         return redirect(url_for('index', room=slug))
     except Exception as e:
-        return f"Ошибка: Этот адрес '{slug}' уже занят или база недоступна.", 400
+        flash(f"Ошибка: Адрес '{slug}' уже занят или база недоступна.")
+        return redirect(url_for('index'))
 
 @website.route('/login', methods=['POST'])
 def login():
