@@ -1,4 +1,6 @@
 fastapi
+flask
+gunicorn
 uvicorn
 psycopg2-binary
 jinja2
