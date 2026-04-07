@@ -6,7 +6,7 @@ import requests
 website = Flask(__name__)
 website.secret_key = os.environ.get("FLASK_SECRET_KEY", "vova_top_secret_777")
 
-# --- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ (без изменений) ---
+# --- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ---
 
 def send_tg_notification(room, text):
     token = os.environ.get("TELEGRAM_BOT_TOKEN")
@@ -61,7 +61,6 @@ def index(slug=None):
 
     is_admin = session.get(f"auth_{room['room_id']}")
 
-    # Достаем последнее действие для кнопки "Отменить"
     last_log = logs[-1] if logs else None
     last_action_text = ""
     if last_log:
@@ -77,15 +76,47 @@ def index(slug=None):
                            is_admin=is_admin,
                            last_action_text=last_action_text)
 
-# --- НОВЫЕ МАРШРУТЫ ДЛЯ КНОПОК МЕНЮ ---
+# --- УПРАВЛЕНИЕ ДАННЫМИ (Добавление/Удаление) ---
 
-@website.route('/logout')
-def logout():
+@website.route('/add_game', methods=['POST'])
+def add_game():
+    slug = request.form.get('slug')
+    room = db.get_room(slug)
+    if room and session.get(f"auth_{room['room_id']}"):
+        name = request.form.get('name')
+        if name: db.add_game_preset(room['room_id'], name)
+    return redirect(url_for('index', room=slug))
+
+@website.route('/add_exercise', methods=['POST'])
+def add_exercise():
+    slug = request.form.get('slug')
+    room = db.get_room(slug)
+    if room and session.get(f"auth_{room['room_id']}"):
+        name = request.form.get('name')
+        u_type = request.form.get('unit_type')
+        if name: db.add_exercise_type(room['room_id'], name, u_type)
+    return redirect(url_for('index', room=slug))
+
+@website.route('/add_profile', methods=['POST'])
+def add_profile():
+    slug = request.form.get('slug')
+    room = db.get_room(slug)
+    if room and session.get(f"auth_{room['room_id']}"):
+        name = request.form.get('name')
+        if name: db.add_profile(room['room_id'], name)
+    return redirect(url_for('index', room=slug))
+
+@website.route('/delete_<type>/<int:id_val>')
+def delete_item(type, id_val):
     slug = request.args.get('slug')
     room = db.get_room(slug)
-    if room:
-        session.pop(f"auth_{room['room_id']}", None)
+    if room and session.get(f"auth_{room['room_id']}"):
+        if type == 'game': db.delete_game_preset(id_val)
+        elif type == 'ex': db.delete_exercise_type(id_val)
+        elif type == 'profile': db.delete_profile(id_val)
     return redirect(url_for('index', room=slug))
+
+# --- ОСТАЛЬНЫЕ МАРШРУТЫ ---
 
 @website.route('/undo/<slug>')
 def undo(slug):
@@ -95,65 +126,32 @@ def undo(slug):
         send_tg_notification(room, "🔙 Последнее действие было отменено админом.")
     return redirect(url_for('index', room=slug))
 
-@website.route('/settings/<type>/<slug>')
-def settings_page(type, slug):
+@website.route('/logout')
+def logout():
+    slug = request.args.get('slug')
     room = db.get_room(slug)
-    if not room or not session.get(f"auth_{room['room_id']}"):
-        return redirect(url_for('index', room=slug))
-    
-    # Здесь ты можешь отрендерить отдельные шаблоны для настроек
-    # Или один общий settings.html
-    return f"Страница настройки {type} для комнаты {slug} в разработке"
-
-# --- ОБРАБОТКА ДАННЫХ (add_log дополнен) ---
+    if room:
+        session.pop(f"auth_{room['room_id']}", None)
+    return redirect(url_for('index', room=slug))
 
 @website.route('/add_log', methods=['POST'])
 def add_log():
     slug = request.form.get('slug')
     room = db.get_room(slug)
-    
-    if not room or not session.get(f"auth_{room['room_id']}"): 
-        return "Доступ запрещен", 403
-    
+    if not room or not session.get(f"auth_{room['room_id']}"): return "Доступ запрещен", 403
     p_id = request.form.get('profile_id')
     ex_name = request.form.get('ex_name')
     val = request.form.get('value')
-    # Проверяем action_type из скрытого поля формы
     action_type = request.form.get('action_type') 
-    
     ex_type_info = db.get_ex_type(ex_name, room['room_id'])
     is_time = (ex_type_info == 'time')
-    
     amt = time_to_seconds(val) if is_time else int(val)
     final_amt = -amt if action_type == 'writeoff' else amt
-    
     db.add_log(p_id, ex_name, final_amt, room['room_id'])
-    
     p_name = db.get_profile_name(p_id)
     action_txt = "списал(а)" if action_type == 'writeoff' else "получил(а) долг"
     send_tg_notification(room, f"⚖️ {p_name} {action_txt}: {ex_name} ({val})")
-    
     return redirect(url_for('index', room=slug))
-
-# --- МАРШРУТЫ СОЗДАНИЯ И ЛОГИНА (без изменений) ---
-
-@website.route('/create_room', methods=['POST'])
-def handle_create_room():
-    title = request.form.get('title', '').strip()
-    slug = request.form.get('slug', '').lower().strip()
-    password = request.form.get('password', '').strip()
-    tg_id = request.form.get('tg_id', '').strip()
-    
-    if not title or not slug or not password:
-        flash("⚠️ Поля не могут быть пустыми!")
-        return redirect(url_for('index'))
-    
-    try:
-        db.create_room(slug, title, password, tg_id if tg_id else None)
-        return redirect(f"/{slug}")
-    except Exception as e:
-        flash(f"Ошибка: Адрес '{slug}' уже занят.")
-        return redirect(url_for('index'))
 
 @website.route('/login', methods=['POST'])
 def login():
@@ -162,9 +160,24 @@ def login():
     room = db.get_room(slug)
     if room and room['password'] == password:
         session[f"auth_{room['room_id']}"] = True
-    else:
-        flash("Неверный пароль")
+    else: flash("Неверный пароль")
     return redirect(url_for('index', room=slug))
+
+@website.route('/create_room', methods=['POST'])
+def handle_create_room():
+    title = request.form.get('title', '').strip()
+    slug = request.form.get('slug', '').lower().strip()
+    password = request.form.get('password', '').strip()
+    tg_id = request.form.get('tg_id', '').strip()
+    if not title or not slug or not password:
+        flash("⚠️ Поля не могут быть пустыми!")
+        return redirect(url_for('index'))
+    try:
+        db.create_room(slug, title, password, tg_id if tg_id else None)
+        return redirect(f"/{slug}")
+    except:
+        flash(f"Ошибка: Адрес '{slug}' уже занят.")
+        return redirect(url_for('index'))
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
