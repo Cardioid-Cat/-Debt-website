@@ -47,11 +47,14 @@ def index(slug=None): # Добавили slug=None
     if not room:
         return "Ошибка: Комната не найдена", 404
     
-    # Загружаем данные из БД через твой database.py
-    profiles = db.get_data("profiles", room['id'])
-    ex_types = db.get_data("exercise_types", room['id'])
-    games = db.get_data("games_presets", room['id'])
-    logs = db.get_data("workout_logs", room['id'])
+    # ЗАМЕНА: вместо room['id'] используем room['room_id']
+    room_actual_id = room['room_id'] 
+    
+    # Загружаем данные, используя правильный ID
+    profiles = db.get_data("profiles", room_actual_id)
+    ex_types = db.get_data("exercise_types", room_actual_id)
+    games = db.get_data("games_presets", room_actual_id)
+    logs = db.get_data("workout_logs", room_actual_id)
     
     # Обработка долгов для отображения (как в твоем старом коде)
     summary = {}
@@ -63,7 +66,7 @@ def index(slug=None): # Добавили slug=None
         summary[name][ex] += amt
 
     # Проверяем, залогинен ли админ именно в ЭТУ комнату
-    is_admin = session.get(f"auth_{room['id']}")
+    is_admin = session.get(f"auth_{room['room_id']}")
 
     return render_template('index.html', 
                            room=room, 
@@ -99,7 +102,7 @@ def login():
     password = request.form.get('password')
     room = db.get_room(slug)
     if room and room['password'] == password:
-        session[f"auth_{room['id']}"] = True
+        session[f"auth_{room['room_id']}"] = True
     else:
         flash("Неверный пароль")
     return redirect(url_for('index', room=slug))
