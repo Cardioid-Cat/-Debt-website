@@ -110,15 +110,7 @@
     </style>
 </head>
 <body>
-{% with messages = get_flashed_messages() %}
-  {% if messages %}
-    <div style="background-color: #FFF5F5; border: 1px solid #FEB2B2; color: #C53030; padding: 15px; border-radius: 10px; margin: 20px auto; max-width: 900px; text-align: center;">
-      {% for message in messages %}
-        {{ message }}
-      {% endfor %}
-    </div>
-  {% endif %}
-{% endwith %}
+
 <div class="container">
     <div class="header">
         <span>🚀</span>
@@ -156,7 +148,18 @@
             </div>
             <input type="text" name="tg_id">
         </div>
-
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}
+            <div class="alert-container">
+              {% for message in messages %}
+                <div class="alert-danger">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    {{ message }}
+                </div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
         <button type="submit" class="btn-submit">Создать комнату</button>
     </form>
 </div>
