@@ -44,7 +44,6 @@ def index(slug=None):
     games = db.get_data("games_presets", room_actual_id)
     logs = db.get_data("workout_logs", room_actual_id)
     
-    # --- ИСПРАВЛЕННЫЙ БЛОК РАСЧЕТА ---
     summary = {p['name']: {} for p in profiles}
     id_to_name = {p['id']: p['name'] for p in profiles}
     
@@ -52,7 +51,6 @@ def index(slug=None):
     ex_icons = {ex['name']: ("🕒" if ex['unit_type'] == 'time' else "💪") for ex in ex_types}
 
     for l in logs:
-        # Берем имя либо по ID (как в твоей базе), либо напрямую из лога
         p_id = l.get('profile_id')
         p_name_in_log = l.get('profile_name')
         name = id_to_name.get(p_id) or p_name_in_log
@@ -62,7 +60,6 @@ def index(slug=None):
             amt = l['amount']
             summary[name].setdefault(ex, 0)
             summary[name][ex] += amt
-    # --------------------------------
 
     is_admin = session.get(f"auth_{room['room_id']}")
     last_log = logs[0] if logs else None 
@@ -88,17 +85,29 @@ def add_game():
     room = db.get_room(slug)
     if room and session.get(f"auth_{room['room_id']}"):
         name = request.form.get('name', '').strip()
+        if not name:
+            flash("Ошибка: Название игры не может быть пустым")
+            return redirect(url_for('index', room=slug))
+            
         ex_name = request.form.get('ex_name')
         val_raw = request.form.get('val', '').strip()
         u_type = db.get_ex_type(ex_name, room['room_id'])
+        
+        # Валидация для кол-ва в пресетах игр
+        if u_type == 'amount' and ":" in val_raw:
+             flash("Ошибка: Для этого упражнения нельзя использовать формат ММ:СС")
+             return redirect(url_for('index', room=slug))
+
         val_numeric = time_to_seconds(val_raw)
         if val_numeric is None:
             flash(f"Ошибка: Некорректное значение '{val_raw}'.")
             return redirect(url_for('index', room=slug))
+            
         existing = db.get_data("games_presets", room['room_id'])
         if any(g['game_name'].lower() == name.lower() for g in existing):
             flash("Ошибка: Такая игра уже есть!")
             return redirect(url_for('index', room=slug))
+            
         db.add_game_preset(room['room_id'], name, ex_name, val_numeric, u_type)
     return redirect(url_for('index', room=slug))
 
@@ -139,7 +148,7 @@ def delete_item(type, id_val):
     room = db.get_room(slug)
     if room and session.get(f"auth_{room['room_id']}"):
         if type == 'game': db.delete_game_preset(id_val)
-        elif type == 'ex': db.delete_exercise_type(id_val)
+        elif type == 'ex': db.delete_exercise_type(id_val, room['room_id'])
         elif type == 'profile': db.delete_profile(id_val)
     return redirect(url_for('index', room=slug))
 
@@ -159,10 +168,18 @@ def add_log():
     ex_name = request.form.get('ex_name')
     val_raw = request.form.get('value', '').strip()
     action_type = request.form.get('action_type') 
+    
+    # Валидация формата
+    u_type = db.get_ex_type(ex_name, room['room_id'])
+    if u_type == 'amount' and ":" in val_raw:
+        flash("Ошибка: Для этого упражнения вводите только числа")
+        return redirect(url_for('index', room=slug))
+    
     amt = time_to_seconds(val_raw)
     if amt is None:
         flash("Ошибка: Некорректное значение")
         return redirect(url_for('index', room=slug))
+        
     final_amt = -amt if action_type == 'writeoff' else amt
     db.add_log(p_id, ex_name, final_amt, room['room_id'])
     p_name = db.get_profile_name(p_id)
