@@ -42,7 +42,7 @@ def get_data(table, room_id, order_by="id"):
         query = """
             SELECT wl.*, p.name as profile_name 
             FROM workout_logs wl
-            JOIN profiles p ON wl.profile_id = p.id
+            LEFT JOIN profiles p ON wl.profile_id = p.id
             WHERE wl.room_id = %s 
             ORDER BY wl.created_at DESC
         """
@@ -92,21 +92,39 @@ def delete_game_preset(id_val):
     cur.close()
     conn.close()
 
-def delete_exercise_type(id_val):
+def delete_exercise_type(id_val, room_id):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("DELETE FROM exercise_types WHERE id = %s", (id_val,))
-    conn.commit()
-    cur.close()
-    conn.close()
+    try:
+        # Сначала узнаем имя упражнения
+        cur.execute("SELECT name FROM exercise_types WHERE id = %s", (id_val,))
+        res = cur.fetchone()
+        if res:
+            ex_name = res[0]
+            # Удаляем связанные логи и пресеты игр, чтобы не было ошибки БД
+            cur.execute("DELETE FROM workout_logs WHERE exercise_type = %s AND room_id = %s", (ex_name, room_id))
+            cur.execute("DELETE FROM games_presets WHERE ex_name = %s AND room_id = %s", (ex_name, room_id))
+            cur.execute("DELETE FROM exercise_types WHERE id = %s", (id_val,))
+            conn.commit()
+    except:
+        conn.rollback()
+    finally:
+        cur.close()
+        conn.close()
 
 def delete_profile(id_val):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("DELETE FROM profiles WHERE id = %s", (id_val,))
-    conn.commit()
-    cur.close()
-    conn.close()
+    try:
+        # Удаляем сначала все логи этого человека
+        cur.execute("DELETE FROM workout_logs WHERE profile_id = %s", (id_val,))
+        cur.execute("DELETE FROM profiles WHERE id = %s", (id_val,))
+        conn.commit()
+    except:
+        conn.rollback()
+    finally:
+        cur.close()
+        conn.close()
 
 def add_log(p_id, ex_name, amount, room_id):
     conn = get_db_connection()
