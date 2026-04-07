@@ -5,76 +5,107 @@
     <title>💪 {{ room.title }}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <style>
-        body { background: #f8f9fa; font-family: 'Inter', sans-serif; }
-        .card { border-radius: 15px; border: none; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; }
-        .btn-primary { background-color: #FF5A50; border: none; }
-        .btn-primary:hover { background-color: #E54E45; }
-        .debt-badge { background: #EDF2F7; color: #2D3748; padding: 5px 10px; border-radius: 8px; font-weight: 600; }
+        :root { --sidebar-bg: #F1F3F9; --accent-red: #FF5A50; }
+        body { background: #FFFFFF; font-family: 'Inter', sans-serif; display: flex; min-height: 100vh; margin: 0; }
+        
+        /* Sidebar Styles */
+        .sidebar { width: 260px; background: var(--sidebar-bg); border-right: 1px solid #E2E8F0; padding: 25px 15px; display: flex; flex-direction: column; }
+        .sidebar h5 { color: #4A5568; font-weight: 700; margin-bottom: 25px; display: flex; align-items: center; gap: 10px; }
+        .nav-btn { width: 100%; text-align: left; background: #fff; border: 1px solid #E2E8F0; padding: 10px 15px; border-radius: 10px; margin-bottom: 10px; font-size: 0.9rem; color: #2D3748; display: flex; align-items: center; justify-content: space-between; }
+        
+        /* Main Content */
+        .main-content { flex-grow: 1; padding: 40px; max-width: 1200px; margin: 0 auto; }
+        .room-title { font-weight: 800; font-size: 2.5rem; color: #2D3748; margin-bottom: 30px; }
+        
+        /* Exercise Buttons */
+        .ex-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 20px; }
+        .ex-btn { background: #fff; border: 1px solid #E2E8F0; padding: 15px; border-radius: 12px; font-weight: 500; transition: 0.2s; }
+        .ex-btn:hover { border-color: var(--accent-red); color: var(--accent-red); }
+        
+        /* Debt Cards */
+        .debt-card { border: 1px solid #E2E8F0; border-radius: 12px; padding: 0; overflow: hidden; margin-bottom: 20px; }
+        .debt-header { background: #F8FAFC; padding: 12px 20px; border-bottom: 1px solid #E2E8F0; display: flex; align-items: center; gap: 10px; font-weight: 600; }
+        .debt-body { padding: 15px 20px; }
+        .debt-item { font-size: 0.95rem; margin-bottom: 8px; color: #4A5568; }
+
+        .btn-logout { background: #fff; border: 1px solid #E2E8F0; color: #718096; padding: 5px 15px; border-radius: 8px; font-size: 0.8rem; align-self: flex-start; margin-bottom: 30px; }
     </style>
 </head>
 <body>
-<div class="container py-4">
-    <h1 class="mb-4">💪 {{ room.title }}</h1>
 
-    {% if is_admin %}
-        <div class="card p-3 bg-white">
-            <h4>📝 Ввод данных (Админ)</h4>
-            <form action="/add_log" method="POST" class="row g-3">
+    <div class="sidebar">
+        <h5><i class="bi bi-gear-fill"></i> Настройки</h5>
+        
+        {% if is_admin %}
+            <a href="/logout?slug={{ room.slug }}" class="btn-logout">Выйти</a>
+            <button class="nav-btn"><span><i class="bi bi-controller"></i> НАСТРОЙКА ИГР</span> <i class="bi bi-chevron-right"></i></button>
+            <button class="nav-btn"><span><i class="bi bi-person-walking"></i> УПРАЖНЕНИЯ</span> <i class="bi bi-chevron-right"></i></button>
+            <button class="nav-btn"><span><i class="bi bi-person-fill"></i> УЧАСТНИКИ</span> <i class="bi bi-chevron-right"></i></button>
+        {% else %}
+            <form action="/login" method="POST" class="mt-3">
                 <input type="hidden" name="slug" value="{{ room.slug }}">
-                <div class="col-md-4">
-                    <select name="profile_id" class="form-select">
-                        {% for p in profiles %}
-                            <option value="{{ p.id }}">{{ p.name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-4">
-                    <select name="ex_name" class="form-select">
-                        {% for ex in ex_types %}
-                            <option value="{{ ex.name }}">{{ ex.name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-4">
-                    <input type="text" name="value" class="form-control" placeholder="Сколько?">
-                </div>
-                <div class="col-12">
-                    <button type="submit" name="action" value="add" class="btn btn-primary">➕ Добавить долг</button>
-                    <button type="submit" name="action" value="writeoff" class="btn btn-outline-success">✅ Списать</button>
-                </div>
+                <input type="password" name="password" class="form-control mb-2" placeholder="Пароль">
+                <button class="btn btn-dark w-100 btn-sm">Войти</button>
             </form>
+        {% endif %}
+    </div>
+
+    <div class="main-content">
+        <h1 class="room-title">💪 {{ room.title }}</h1>
+
+        <div class="d-flex gap-4 mb-4 border-bottom pb-2">
+            <span class="text-danger fw-bold border-bottom border-danger border-3 pb-2">📝 Ввод</span>
+            <span class="text-muted">🎲 Игра</span>
         </div>
-    {% else %}
-        <div class="alert alert-light border">
-            🔑 Для управления долгами войдите как админ.
-            <form action="/login" method="POST" class="d-flex mt-2 gap-2">
+
+        {% if is_admin %}
+        <div class="mb-5">
+            <label class="text-muted small d-block mb-2">Кому?</label>
+            <form action="/add_log" method="POST">
                 <input type="hidden" name="slug" value="{{ room.slug }}">
-                <input type="password" name="password" class="form-control form-control-sm w-auto" placeholder="Пароль">
-                <button class="btn btn-sm btn-dark">Войти</button>
-            </form>
-        </div>
-    {% endif %}
+                <select name="profile_id" class="form-select form-select-lg mb-3" style="background-color: #EDF2F7; border: none;">
+                    {% for p in profiles %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}
+                </select>
 
-    <hr>
-
-    <h3 class="mt-4">📊 Текущие долги</h3>
-    <div class="row">
-        {% for name, debts in summary.items() %}
-        <div class="col-md-6">
-            <div class="card p-3">
-                <h5>👤 {{ name }}</h5>
-                <div class="d-flex flex-wrap gap-2">
-                    {% for ex, total in debts.items() %}
-                        {% if total != 0 %}
-                            <div class="debt-badge">{{ ex }}: {{ total }}</div>
-                        {% endif %}
+                <div class="ex-grid">
+                    {% for ex in ex_types %}
+                        <button type="submit" name="ex_name" value="{{ ex.name }}" class="ex-btn">{{ ex.name }}</button>
                     {% endfor %}
                 </div>
+                
+                <div class="mt-3">
+                    <input type="text" name="value" class="form-control w-25 d-inline-block" placeholder="Значение">
+                    <input type="checkbox" name="writeoff" value="1" id="wo"> <label for="wo">Списать</label>
+                </div>
+            </form>
+        </div>
+        {% endif %}
+
+        <h4 class="mb-4">📊 Текущие долги</h4>
+        
+        {% for name, debts in summary.items() %}
+        <div class="debt-card">
+            <div class="debt-header">
+                <i class="bi bi-person-fill text-primary"></i> {{ name }}
+            </div>
+            <div class="debt-body">
+                {% for ex, total in debts.items() %}
+                    {% if total != 0 %}
+                        <div class="debt-item"><strong>{{ ex }}:</strong> 
+                            {% if ex_map[ex] == 'time' %}
+                                {{ total // 60 }}:{{ "%02d" % (total % 60) }}
+                            {% else %}
+                                {{ total }}
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                {% endfor %}
             </div>
         </div>
         {% endfor %}
     </div>
-</div>
+
 </body>
 </html>
