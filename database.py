@@ -96,32 +96,37 @@ def delete_exercise_type(id_val, room_id):
     conn = get_db_connection()
     cur = conn.cursor()
     try:
-        # Сначала узнаем имя упражнения
+        # Узнаем имя упражнения перед удалением
         cur.execute("SELECT name FROM exercise_types WHERE id = %s", (id_val,))
         res = cur.fetchone()
         if res:
             ex_name = res[0]
-            # Удаляем связанные логи и пресеты игр, чтобы не было ошибки БД
+            # 1. Удаляем логи с этим упражнением ТОЛЬКО в этой комнате
             cur.execute("DELETE FROM workout_logs WHERE exercise_type = %s AND room_id = %s", (ex_name, room_id))
+            # 2. Удаляем игры, завязанные на это упражнение
             cur.execute("DELETE FROM games_presets WHERE ex_name = %s AND room_id = %s", (ex_name, room_id))
+            # 3. Теперь само упражнение
             cur.execute("DELETE FROM exercise_types WHERE id = %s", (id_val,))
             conn.commit()
-    except:
+    except Exception as e:
         conn.rollback()
+        print(f"Error delete_exercise_type: {e}")
     finally:
         cur.close()
         conn.close()
 
-def delete_profile(id_val):
+def delete_profile(id_val, room_id):
     conn = get_db_connection()
     cur = conn.cursor()
     try:
-        # Удаляем сначала все логи этого человека
-        cur.execute("DELETE FROM workout_logs WHERE profile_id = %s", (id_val,))
-        cur.execute("DELETE FROM profiles WHERE id = %s", (id_val,))
+        # 1. Сначала удаляем все логи этого участника в этой комнате
+        cur.execute("DELETE FROM workout_logs WHERE profile_id = %s AND room_id = %s", (id_val, room_id))
+        # 2. Удаляем самого участника
+        cur.execute("DELETE FROM profiles WHERE id = %s AND room_id = %s", (id_val, room_id))
         conn.commit()
-    except:
+    except Exception as e:
         conn.rollback()
+        print(f"Error delete_profile: {e}")
     finally:
         cur.close()
         conn.close()
