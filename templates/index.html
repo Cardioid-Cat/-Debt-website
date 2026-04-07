@@ -24,7 +24,6 @@
             white-space: nowrap;
         }
         .sidebar.collapsed { width: 85px; padding: 25px 12px; }
-        
         .sidebar.collapsed .sidebar-text, 
         .sidebar.collapsed .sidebar-hide,
         .sidebar.collapsed .undo-section,
@@ -102,18 +101,30 @@
                         <button class="btn-del-tiny" onclick="confirmDelete('/delete_game/{{ g.id }}', '{{ g.name }}')"><i class="bi bi-trash"></i></button>
                     </div>
                     {% endfor %}
-                    <a href="#" class="text-center small mt-1 text-decoration-none text-muted">+ Добавить</a>
+                    <form action="/add_game" method="POST" class="p-2 border-top mt-1">
+                        <input type="hidden" name="slug" value="{{ room.slug }}">
+                        <input type="text" name="name" class="form-control form-control-sm mb-1" placeholder="Название игры" required style="font-size: 0.75rem;">
+                        <button type="submit" class="btn btn-dark btn-sm w-100" style="font-size: 0.7rem;">+ Добавить</button>
+                    </form>
                 </div>
 
                 <div class="nav-link-custom" onclick="toggleSubmenu('sub-ex')"><i class="bi bi-person-walking"></i> <span class="sidebar-text">УПРАЖНЕНИЯ</span></div>
                 <div id="sub-ex" class="submenu-settings">
                     {% for ex in ex_types %}
                     <div class="submenu-item">
-                        <span>{{ ex.name }}</span>
+                        <span>{{ ex.name }} {% if ex.unit_type == 'time' %}(⏱️){% endif %}</span>
                         <button class="btn-del-tiny" onclick="confirmDelete('/delete_ex/{{ ex.id }}', '{{ ex.name }}')"><i class="bi bi-trash"></i></button>
                     </div>
                     {% endfor %}
-                    <a href="#" class="text-center small mt-1 text-decoration-none text-muted">+ Добавить</a>
+                    <form action="/add_exercise" method="POST" class="p-2 border-top mt-1">
+                        <input type="hidden" name="slug" value="{{ room.slug }}">
+                        <input type="text" name="name" class="form-control form-control-sm mb-1" placeholder="Название" required style="font-size: 0.75rem;">
+                        <select name="unit_type" class="form-select form-select-sm mb-1" style="font-size: 0.75rem;">
+                            <option value="amount">Количество</option>
+                            <option value="time">Время (ММ:СС)</option>
+                        </select>
+                        <button type="submit" class="btn btn-dark btn-sm w-100" style="font-size: 0.7rem;">+ Добавить</button>
+                    </form>
                 </div>
 
                 <div class="nav-link-custom" onclick="toggleSubmenu('sub-users')"><i class="bi bi-person-fill"></i> <span class="sidebar-text">УЧАСТНИКИ</span></div>
@@ -124,7 +135,11 @@
                         <button class="btn-del-tiny" onclick="confirmDelete('/delete_profile/{{ p.id }}', '{{ p.name }}')"><i class="bi bi-trash"></i></button>
                     </div>
                     {% endfor %}
-                    <a href="#" class="text-center small mt-1 text-decoration-none text-muted">+ Добавить</a>
+                    <form action="/add_profile" method="POST" class="p-2 border-top mt-1">
+                        <input type="hidden" name="slug" value="{{ room.slug }}">
+                        <input type="text" name="name" class="form-control form-control-sm mb-1" placeholder="Имя" required style="font-size: 0.75rem;">
+                        <button type="submit" class="btn btn-dark btn-sm w-100" style="font-size: 0.7rem;">+ Добавить</button>
+                    </form>
                 </div>
 
                 <div class="undo-section">
@@ -192,17 +207,14 @@
         <div id="view-igra" style="display:none;">
             <form action="/play_game" method="POST" id="game-form">
                 <input type="hidden" name="slug" value="{{ room.slug }}">
-                
                 <label class="small text-muted">Игра?</label>
                 <select name="game_name" class="form-select mb-3 bg-light border-0 py-2">
                     {% for game in games %}<option>{{ game.name }}</option>{% endfor %}
                 </select>
-
                 <label class="small text-muted">Кто победил?</label>
                 <select name="winner_ids" id="winners-select" class="form-select mb-3 bg-light border-0" multiple style="height: 120px;" required>
                     {% for p in profiles %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}
                 </select>
-
                 <button type="submit" class="btn-main mb-3">🔥 Раздать долги</button>
             </form>
         </div>
@@ -249,7 +261,7 @@
                 <div class="modal-body text-center p-4">
                     <h6 class="mb-3">Отменить последнее действие?</h6>
                     <div class="d-flex gap-2">
-                        <a href="/undo?slug={{ room.slug|urlencode }}" class="btn btn-danger w-100 btn-sm text-decoration-none">Да</a>
+                        <a href="/undo/{{ room.slug }}" class="btn btn-danger w-100 btn-sm text-decoration-none">Да</a>
                         <button class="btn btn-light border w-100 btn-sm" data-bs-dismiss="modal">Нет</button>
                     </div>
                 </div>
@@ -267,13 +279,10 @@
             icon.className = sb.classList.contains('collapsed') ? 'bi bi-chevron-double-right' : 'bi bi-chevron-double-left';
         }
 
-        // Функция открытия/закрытия подменю в левой колонке
         function toggleSubmenu(id) {
             const menu = document.getElementById(id);
             const isVisible = menu.style.display === 'flex';
-            // Сначала закроем все остальные
             document.querySelectorAll('.submenu-settings').forEach(m => m.style.display = 'none');
-            // Переключим текущее
             menu.style.display = isVisible ? 'none' : 'flex';
         }
 
@@ -303,7 +312,6 @@
             document.getElementById('vvod-controls').style.display = 'block';
         }
 
-        // Подтверждение удаления
         function confirmDelete(url, name) {
             if (confirm(`Вы уверены, что хотите удалить "${name}"?`)) {
                 window.location.href = url + "?slug={{ room.slug|urlencode }}";
