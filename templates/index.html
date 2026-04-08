@@ -33,6 +33,7 @@
         .hall-of-fame-text { color: #3182CE; font-weight: 500; }
         /* Стили для чекбоксов победителей */
         .winner-checkbox-group {
+            padding-left: 2rem;
             max-height: 250px;
             overflow-y: auto;
             border: 1px solid var(--border-color);
@@ -207,15 +208,15 @@
                 
                 <label class="small text-muted mb-2 d-block">Кто победил?</label>
                 <div class="winner-checkbox-group mb-3">
-                    {% for p in profiles %}
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" name="winner_ids" value="{{ p.id }}" id="winner_{{ p.id }}">
-                        <label class="form-check-label w-100" for="winner_{{ p.id }}">
-                            {{ p.name }}
-                        </label>
-                    </div>
-                    {% endfor %}
-                </div>
+    {% for p in profiles %}
+    <div class="form-check">
+        <input class="form-check-input" type="checkbox" name="winner_ids" value="{{ p.id }}" id="winner_{{ p.id }}">
+        <label class="form-check-label" for="winner_{{ p.id }}">
+            {{ p.name }}
+        </label>
+    </div>
+    {% endfor %}
+</div>
                 <p class="small text-muted mb-3">✓ Выберите всех, кто выиграл (можно нескольких)</p>
                 
                 <button type="submit" class="btn-main">🔥 Раздать долги</button>
