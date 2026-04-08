@@ -377,11 +377,11 @@
     var unit = selectedOption.getAttribute('data-unit');
     var inputField = document.getElementById('game_val_input');
     if (unit === 'time') {
-        inputField.placeholder = "Кол-во или ММ:СС (например, 1:30)";
+        inputField.placeholder = "Кол-во или ММ:СС";
         inputField.pattern = ".*\\S.*";
         inputField.title = "";
     } else {
-        inputField.placeholder = "Только число (например, 50)";
+        inputField.placeholder = "Только число";
         inputField.pattern = "^[0-9]+$";
         inputField.title = "Введите только число";
     }
