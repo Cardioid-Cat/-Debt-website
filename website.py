@@ -100,13 +100,12 @@ def add_profile():
         if name: db.add_profile(room['room_id'], name)
     return redirect(url_for('index', room=slug))
 
-# ОБНОВЛЕННЫЙ РОУТ УДАЛЕНИЯ
-@website.route('/delete_<type>/<int:id_val>')
+# --- ИСПРАВЛЕННЫЙ РОУТ (убрали <int:>) ---
+@website.route('/delete_<type>/<id_val>')
 def delete_item(type, id_val):
     slug = request.args.get('slug')
     room = db.get_room(slug)
     if room and session.get(f"auth_{room['room_id']}"):
-        # Теперь передаем room_id везде, где это нужно для удаления зависимостей
         if type == 'game': 
             db.delete_game_preset(id_val)
         elif type == 'ex': 
