@@ -7,37 +7,29 @@ DATABASE_URL = os.environ.get("DATABASE_URL")
 def get_db_connection():
     return psycopg2.connect(DATABASE_URL, sslmode='require')
 
-# --- ИНИЦИАЛИЗАЦИЯ (добавление "🏆 Победа" во все комнаты) ---
+# --- ГАРАНТИРУЕМ НАЛИЧИЕ "🏆 Победа" В КОМНАТЕ ---
 
 def ensure_hall_of_fame_exercise(room_id):
-    """Добавляет упражнение '🏆 Победа' в комнату, если его ещё нет"""
+    """Добавляет упражнение '🏆 Победа' в комнату, если его ещё нет (безопасно, без гонки)"""
     conn = get_db_connection()
     cur = conn.cursor()
     try:
+        # Сначала проверим, есть ли уже
         cur.execute(
             "SELECT 1 FROM exercise_types WHERE room_id = %s AND name = '🏆 Победа'",
             (room_id,)
         )
-        exists = cur.fetchone()
-        if not exists:
-            cur.execute(
-                "INSERT INTO exercise_types (room_id, name, unit_type) VALUES (%s, %s, %s)",
-                (room_id, '🏆 Победа', 'amount')
-            )
-            conn.commit()
-    finally:
-        cur.close()
-        conn.close()
-
-def init_all_rooms():
-    """При запуске приложения добавляет '🏆 Победа' во все существующие комнаты"""
-    conn = get_db_connection()
-    cur = conn.cursor()
-    try:
-        cur.execute("SELECT room_id FROM rooms")
-        rooms = cur.fetchall()
-        for (room_id,) in rooms:
-            ensure_hall_of_fame_exercise(room_id)
+        if cur.fetchone():
+            return  # уже есть
+        # Если нет – вставляем (может быть гонка, но тогда поймаем UniqueViolation)
+        cur.execute(
+            "INSERT INTO exercise_types (room_id, name, unit_type) VALUES (%s, %s, %s)",
+            (room_id, '🏆 Победа', 'amount')
+        )
+        conn.commit()
+    except psycopg2.errors.UniqueViolation:
+        # Кто-то другой уже вставил – игнорируем
+        conn.rollback()
     finally:
         cur.close()
         conn.close()
@@ -48,10 +40,13 @@ def get_room(slug):
     conn = get_db_connection()
     cur = conn.cursor(cursor_factory=RealDictCursor)
     cur.execute("SELECT * FROM rooms WHERE slug = %s", (slug,))
-    res = cur.fetchone()
+    room = cur.fetchone()
     cur.close()
     conn.close()
-    return res
+    if room:
+        # При каждом обращении к комнате проверяем, есть ли в ней "🏆 Победа"
+        ensure_hall_of_fame_exercise(room['room_id'])
+    return room
 
 def get_data(table, room_id, order_by="id"):
     conn = get_db_connection()
@@ -107,10 +102,10 @@ def create_room(slug, title, password, tg_chat_id=None):
             (slug, title, password, tg_chat_id)
         )
         conn.commit()
-        # Получаем room_id только что созданной комнаты
+        # Получаем room_id
         cur.execute("SELECT room_id FROM rooms WHERE slug = %s", (slug,))
         room_id = cur.fetchone()[0]
-        # Автоматически добавляем упражнение "🏆 Победа"
+        # Добавляем "🏆 Победа" (безопасно)
         ensure_hall_of_fame_exercise(room_id)
     except Exception as e:
         conn.rollback()
@@ -133,9 +128,8 @@ def game_preset_exists(room_id, ex_name, val):
     return exists
 
 def add_game_preset(room_id, game_name, ex_name, val):
-    """Добавляет игру, если нет дубликата по (ex_name, val)"""
     if game_preset_exists(room_id, ex_name, val):
-        return False  # игра с таким наказанием уже существует
+        return False
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute("""
@@ -148,7 +142,6 @@ def add_game_preset(room_id, game_name, ex_name, val):
     return True
 
 def exercise_type_exists(room_id, name):
-    """Проверяет, есть ли уже упражнение с таким названием в комнате"""
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute(
@@ -161,9 +154,8 @@ def exercise_type_exists(room_id, name):
     return exists
 
 def add_exercise_type(room_id, name, unit_type):
-    """Добавляет упражнение, если нет дубликата по имени и это не служебное '🏆 Победа'"""
     if name == "🏆 Победа":
-        return False  # запрещаем ручное создание
+        return False
     if exercise_type_exists(room_id, name):
         return False
     conn = get_db_connection()
@@ -205,7 +197,7 @@ def add_log(p_id, ex_name, amount, room_id):
     cur.close()
     conn.close()
 
-# --- УДАЛЕНИЕ ДАННЫХ (с защитой "🏆 Победа") ---
+# --- УДАЛЕНИЕ (с защитой "🏆 Победа") ---
 
 def delete_game_preset(id_val):
     conn = get_db_connection()
@@ -221,15 +213,12 @@ def delete_exercise_type(id_val, room_id):
     conn = get_db_connection()
     cur = conn.cursor()
     try:
-        # Получаем имя упражнения
         cur.execute("SELECT name FROM exercise_types WHERE id = %s AND room_id = %s", (id_val, room_id))
         res = cur.fetchone()
         if res:
             ex_name = res[0]
             if ex_name == "🏆 Победа":
-                # Не удаляем служебное упражнение
                 return False
-            # Удаляем связанные логи и пресеты
             cur.execute("DELETE FROM workout_logs WHERE exercise_type = %s AND room_id = %s", (ex_name, room_id))
             cur.execute("DELETE FROM games_presets WHERE ex_name = %s AND room_id = %s", (ex_name, room_id))
             cur.execute("DELETE FROM exercise_types WHERE id = %s", (id_val,))
