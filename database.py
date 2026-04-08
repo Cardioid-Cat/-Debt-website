@@ -115,15 +115,15 @@ def game_preset_exists(room_id, ex_name, val):
     conn.close()
     return exists
 
-def add_game_preset(room_id, game_name, ex_name, val):
+def add_game_preset(room_id, game_name, ex_name, val, unit_type):
     if game_preset_exists(room_id, ex_name, val):
         return False
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute("""
-        INSERT INTO games_presets (room_id, game_name, ex_name, val) 
-        VALUES (%s, %s, %s, %s)
-    """, (room_id, game_name, ex_name, val))
+        INSERT INTO games_presets (room_id, game_name, ex_name, val, unit_type) 
+        VALUES (%s, %s, %s, %s, %s)
+    """, (room_id, game_name, ex_name, val, unit_type))
     conn.commit()
     cur.close()
     conn.close()
@@ -225,9 +225,7 @@ def delete_profile(id_val, room_id):
     conn = get_db_connection()
     cur = conn.cursor()
     try:
-        # Удаляем логи этого участника
         cur.execute("DELETE FROM workout_logs WHERE profile_id = %s AND room_id = %s", (id_val, room_id))
-        # Удаляем сам профиль
         cur.execute("DELETE FROM profiles WHERE id = %s AND room_id = %s", (id_val, room_id))
         conn.commit()
     except Exception as e:
