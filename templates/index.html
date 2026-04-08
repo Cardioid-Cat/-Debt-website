@@ -53,7 +53,7 @@
                             <option value="" disabled selected>Упражнение</option>
                             {% for ex in ex_types %}<option value="{{ ex.name }}">{{ ex.name }}</option>{% endfor %}
                         </select>
-                        <input type="text" name="val" class="form-control form-control-sm mb-1" placeholder="Кол-во или ММ:СС" required style="font-size: 0.75rem;">
+                        <input type="text" name="val" class="form-control form-control-sm mb-1" placeholder="Кол-во или ММ:СС" required pattern=".*\S.*" style="font-size: 0.75rem;">
                         <button type="submit" class="btn btn-dark btn-sm w-100" style="font-size: 0.7rem;">+ Добавить</button>
                     </form>
                     {% for g in games %}
@@ -68,7 +68,7 @@
                 <div id="sub-ex" class="submenu-settings">
                     <form action="/add_exercise" method="POST" class="p-2 border-bottom mb-2">
                         <input type="hidden" name="slug" value="{{ room.slug }}">
-                        <input type="text" name="name" class="form-control form-control-sm mb-1" placeholder="Название" required pattern=".*\S.*" style="font-size: 0.75rem;">
+                        <input type="text" name="name" class="form-control form-control-sm mb-1" placeholder="Название" required pattern=".*\S.*" title="Название не может состоять только из пробелов" style="font-size: 0.75rem;">
                         <select name="unit_type" class="form-select form-select-sm mb-1" style="font-size: 0.75rem;">
                             <option value="amount">Количество</option>
                             <option value="time">Время (ММ:СС)</option>
@@ -87,7 +87,7 @@
                 <div id="sub-users" class="submenu-settings">
                     <form action="/add_profile" method="POST" class="p-2 border-bottom mb-2">
                         <input type="hidden" name="slug" value="{{ room.slug }}">
-                        <input type="text" name="name" class="form-control form-control-sm mb-1" placeholder="Имя" required pattern=".*\S.*" style="font-size: 0.75rem;">
+                        <input type="text" name="name" class="form-control form-control-sm mb-1" placeholder="Имя" required pattern=".*\S.*" title="Имя не может состоять только из пробелов" style="font-size: 0.75rem;">
                         <button type="submit" class="btn btn-dark btn-sm w-100" style="font-size: 0.7rem;">+ Добавить</button>
                     </form>
                     {% for p in profiles %}
@@ -148,11 +148,13 @@
                 <input type="hidden" name="ex_name" id="selected-ex-name" required>
                 <div class="ex-grid mb-4">
                     {% for ex in ex_types %}
-                        <div class="btn-check-custom" onclick="selectExercise(this, '{{ ex.name }}')">{{ ex.name }}</div>
+                        <div class="btn-check-custom" 
+                             data-unit="{{ ex.unit_type }}" 
+                             onclick="selectExercise(this, '{{ ex.name }}')">{{ ex.name }}</div>
                     {% endfor %}
                 </div>
                 <div id="vvod-controls" style="display:none;">
-                    <input type="text" name="value" class="form-control form-control-lg mb-3" placeholder="Сколько? (Напр: 20 или 1:30)" required>
+                    <input type="text" name="value" id="exercise-value" class="form-control form-control-lg mb-3" placeholder="Сколько?" required>
                     <div class="d-flex gap-2">
                         <button type="submit" class="btn-main" onclick="document.getElementById('action_type').value='add'">➕ Добавить долг</button>
                         <button type="submit" class="btn-outline-green px-4" onclick="document.getElementById('action_type').value='writeoff'"><i class="bi bi-check2"></i> Списать</button>
@@ -287,6 +289,20 @@
             document.getElementById('tab-igra').classList.toggle('active', tab === 'igra');
         }
         function selectExercise(el, name) {
+            const unit = el.getAttribute('data-unit');
+            const input = document.getElementById('exercise-value');
+            
+            // Динамическая валидация
+            if (unit === 'time') {
+                input.placeholder = "Напр: 20 или 1:30";
+                input.pattern = "^(\\d+|\\d+:\\d+)$";
+                input.title = "Введите число (секунды) или формат ММ:СС";
+            } else {
+                input.placeholder = "Напр: 20";
+                input.pattern = "^[0-9]+$";
+                input.title = "Введите только число";
+            }
+
             document.querySelectorAll('.btn-check-custom').forEach(b => b.classList.remove('selected-ex'));
             el.classList.add('selected-ex');
             document.getElementById('selected-ex-name').value = name;
