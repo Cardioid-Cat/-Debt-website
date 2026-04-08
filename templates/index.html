@@ -85,7 +85,7 @@
                     {% for g in games %}
                     <div class="submenu-item">
                         <span>{{ g.game_name }} ({{ g.val }})</span>
-                        <button class="btn-del-tiny" onclick="showDelModal('/delete_game/{{ g.id }}', {{ g.game_name|tojson }})"><i class="bi bi-trash"></i></button>
+                        <button class="btn-del-tiny" data-url="/delete_game/{{ g.id }}" data-name="{{ g.game_name }}"><i class="bi bi-trash"></i></button>
                     </div>
                     {% endfor %}
                 </div>
@@ -107,7 +107,7 @@
                             {% if ex.unit_type == 'time' %}🕒{% else %}💪{% endif %}
                             {{ ex.name }}
                         </span>
-                        <button class="btn-del-tiny" onclick="showDelModal('/delete_ex/{{ ex.id }}', {{ ex.name|tojson }})"><i class="bi bi-trash"></i></button>
+                        <button class="btn-del-tiny" data-url="/delete_ex/{{ ex.id }}" data-name="{{ ex.name }}"><i class="bi bi-trash"></i></button>
                     </div>
                     {% endfor %}
                 </div>
@@ -122,7 +122,7 @@
                     {% for p in profiles %}
                     <div class="submenu-item">
                         <span>{{ p.name }}</span>
-                        <button class="btn-del-tiny" onclick="showDelModal('/delete_profile/{{ p.id }}', {{ p.name|tojson }})"><i class="bi bi-trash"></i></button>
+                        <button class="btn-del-tiny" data-url="/delete_profile/{{ p.id }}" data-name="{{ p.name }}"><i class="bi bi-trash"></i></button>
                     </div>
                     {% endfor %}
                 </div>
@@ -360,12 +360,18 @@
             document.getElementById('selected-ex-name').value = name;
             document.getElementById('vvod-controls').style.display = 'block';
         }
-        function showDelModal(url, name) {
-            document.getElementById('delItemName').innerText = name;
-            document.getElementById('confirmDelLink').href = url + "?slug={{ room.slug|urlencode }}";
-            let myModal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
-            myModal.show();
-        }
+        // Новая функция удаления без проблем с кавычками
+        document.querySelectorAll('.btn-del-tiny').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const url = this.getAttribute('data-url');
+                const name = this.getAttribute('data-name');
+                document.getElementById('delItemName').innerText = name;
+                document.getElementById('confirmDelLink').href = url + "?slug={{ room.slug|urlencode }}";
+                let myModal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+                myModal.show();
+            });
+        });
     </script>
 </body>
 </html>
