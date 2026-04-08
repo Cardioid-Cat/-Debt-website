@@ -147,7 +147,13 @@ def add_exercise():
             elif db.exercise_type_exists(room['room_id'], name):
                 flash(f"Упражнение «{name}» уже существует в этой комнате.")
             else:
-                db.add_exercise_type(room['room_id'], name, u_type)
+                success = db.add_exercise_type(room['room_id'], name, u_type)
+                if success:
+                    flash(f"Упражнение «{name}» добавлено.")
+                else:
+                    flash(f"Не удалось добавить упражнение «{name}». Возможно, оно уже существует.")
+        else:
+            flash("Название упражнения не может быть пустым.")
     return redirect(url_for('index', room=slug))
 
 @website.route('/add_profile', methods=['POST'])
