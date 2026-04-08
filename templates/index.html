@@ -147,12 +147,14 @@
                 </select>
                 <input type="hidden" name="ex_name" id="selected-ex-name" required>
                 <div class="ex-grid mb-4">
-                    {% for ex in ex_types %}
-                        <div class="btn-check-custom" 
-                             data-unit="{{ ex.unit_type }}" 
-                             onclick="selectExercise(this, '{{ ex.name }}')">{{ ex.name }}</div>
-                    {% endfor %}
-                </div>
+    {% for ex in ex_types %}
+        {% if ex.name != "🏆 Победа" %}
+            <div class="btn-check-custom" 
+                 data-unit="{{ ex.unit_type }}" 
+                 onclick="selectExercise(this, '{{ ex.name }}')">{{ ex.name }}</div>
+        {% endif %}
+    {% endfor %}
+</div>
                 <div id="vvod-controls" style="display:none;">
                     <input type="text" name="value" id="exercise-value" class="form-control form-control-lg mb-3" placeholder="Сколько?" required>
                     <div class="d-flex gap-2">
