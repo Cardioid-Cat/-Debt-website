@@ -32,7 +32,7 @@ def index(slug=None):
     if not slug: slug = request.args.get('room')
     if not slug: return render_template('create_room.html')
     
-    room = db.get_room(slug)  # внутри уже вызывается ensure_hall_of_fame_exercise
+    room = db.get_room(slug)
     if not room: return "Ошибка: Комната не найдена", 404
     
     room_actual_id = room['room_id']
@@ -46,7 +46,6 @@ def index(slug=None):
     ex_map = {ex['name']: ex['unit_type'] for ex in ex_types}
     ex_icons = {ex['name']: ("🕒" if ex['unit_type'] == 'time' else "💪") for ex in ex_types}
 
-    # Зал Славы
     hof_data = {}
     for l in logs:
         if l.get('exercise_type') == "🏆 Победа":
