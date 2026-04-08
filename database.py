@@ -165,18 +165,32 @@ def exercise_type_exists(room_id, name):
 def add_exercise_type(room_id, name, unit_type):
     if name == "🏆 Победа":
         return False
-    if exercise_type_exists(room_id, name):
-        return False
+    # Нормализуем имя (удаляем лишние пробелы, можно и lower, но оставим как есть)
+    name = name.strip()
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute(
-        "INSERT INTO exercise_types (room_id, name, unit_type) VALUES (%s, %s, %s)",
-        (room_id, name, unit_type)
-    )
-    conn.commit()
-    cur.close()
-    conn.close()
-    return True
+    try:
+        # Сначала проверим, существует ли уже
+        cur.execute(
+            "SELECT 1 FROM exercise_types WHERE room_id = %s AND name = %s",
+            (room_id, name)
+        )
+        if cur.fetchone():
+            return False
+        # Если нет – вставляем
+        cur.execute(
+            "INSERT INTO exercise_types (room_id, name, unit_type) VALUES (%s, %s, %s)",
+            (room_id, name, unit_type)
+        )
+        conn.commit()
+        return True
+    except Exception as e:
+        conn.rollback()
+        print(f"Error adding exercise: {e}")
+        return False
+    finally:
+        cur.close()
+        conn.close()
 
 def profile_exists(room_id, name):
     conn = get_db_connection()
