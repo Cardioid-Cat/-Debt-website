@@ -6,10 +6,6 @@ import requests
 website = Flask(__name__)
 website.secret_key = os.environ.get("FLASK_SECRET_KEY", "vova_top_secret_777")
 
-# Инициализация БД: добавляем "🏆 Победа" во все комнаты при старте
-with website.app_context():
-    db.init_all_rooms()
-
 def send_tg_notification(room, text):
     token = os.environ.get("TELEGRAM_BOT_TOKEN")
     chat_id = room.get("tg_chat_id")
@@ -36,7 +32,7 @@ def index(slug=None):
     if not slug: slug = request.args.get('room')
     if not slug: return render_template('create_room.html')
     
-    room = db.get_room(slug)
+    room = db.get_room(slug)  # внутри уже вызывается ensure_hall_of_fame_exercise
     if not room: return "Ошибка: Комната не найдена", 404
     
     room_actual_id = room['room_id']
@@ -50,7 +46,7 @@ def index(slug=None):
     ex_map = {ex['name']: ex['unit_type'] for ex in ex_types}
     ex_icons = {ex['name']: ("🕒" if ex['unit_type'] == 'time' else "💪") for ex in ex_types}
 
-    # Зал Славы (Победы)
+    # Зал Славы
     hof_data = {}
     for l in logs:
         if l.get('exercise_type') == "🏆 Победа":
@@ -94,7 +90,6 @@ def add_game():
         val_raw = request.form.get('val', '').strip()
         val_numeric = time_to_seconds(val_raw)
         if val_numeric is not None and name:
-            # Проверяем, нет ли уже игры с таким же упражнением и значением
             if db.game_preset_exists(room['room_id'], ex_name, val_numeric):
                 flash(f"Игра с наказанием '{ex_name} {val_raw}' уже существует!")
             else:
@@ -190,7 +185,6 @@ def play_game():
                     db.add_log(p['id'], game['ex_name'], game['val'], room['room_id'])
                     losers_names.append(p['name'])
                 else:
-                    # Начисляем победу
                     db.add_log(p['id'], "🏆 Победа", 1, room['room_id'])
             
             if losers_names:
