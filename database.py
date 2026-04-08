@@ -7,29 +7,20 @@ DATABASE_URL = os.environ.get("DATABASE_URL")
 def get_db_connection():
     return psycopg2.connect(DATABASE_URL, sslmode='require')
 
-# --- ГАРАНТИРУЕМ НАЛИЧИЕ "🏆 Победа" В КОМНАТЕ ---
+# --- БЕЗОПАСНОЕ ДОБАВЛЕНИЕ "🏆 Победа" (без конфликтов) ---
 
 def ensure_hall_of_fame_exercise(room_id):
-    """Добавляет упражнение '🏆 Победа' в комнату, если его ещё нет (безопасно, без гонки)"""
+    """Добавляет упражнение '🏆 Победа' в комнату, если его ещё нет.
+       Использует INSERT ... ON CONFLICT, чтобы избежать ошибок параллельного доступа."""
     conn = get_db_connection()
     cur = conn.cursor()
     try:
-        # Сначала проверим, есть ли уже
-        cur.execute(
-            "SELECT 1 FROM exercise_types WHERE room_id = %s AND name = '🏆 Победа'",
-            (room_id,)
-        )
-        if cur.fetchone():
-            return  # уже есть
-        # Если нет – вставляем (может быть гонка, но тогда поймаем UniqueViolation)
-        cur.execute(
-            "INSERT INTO exercise_types (room_id, name, unit_type) VALUES (%s, %s, %s)",
-            (room_id, '🏆 Победа', 'amount')
-        )
+        cur.execute("""
+            INSERT INTO exercise_types (room_id, name, unit_type)
+            VALUES (%s, %s, %s)
+            ON CONFLICT (name) DO NOTHING
+        """, (room_id, '🏆 Победа', 'amount'))
         conn.commit()
-    except psycopg2.errors.UniqueViolation:
-        # Кто-то другой уже вставил – игнорируем
-        conn.rollback()
     finally:
         cur.close()
         conn.close()
@@ -44,7 +35,6 @@ def get_room(slug):
     cur.close()
     conn.close()
     if room:
-        # При каждом обращении к комнате проверяем, есть ли в ней "🏆 Победа"
         ensure_hall_of_fame_exercise(room['room_id'])
     return room
 
@@ -91,7 +81,7 @@ def get_profile_name(p_id):
     conn.close()
     return res[0] if res else "Кто-то"
 
-# --- ДОБАВЛЕНИЕ ДАННЫХ (с проверками) ---
+# --- ДОБАВЛЕНИЕ (с проверками дубликатов) ---
 
 def create_room(slug, title, password, tg_chat_id=None):
     conn = get_db_connection()
@@ -102,10 +92,8 @@ def create_room(slug, title, password, tg_chat_id=None):
             (slug, title, password, tg_chat_id)
         )
         conn.commit()
-        # Получаем room_id
         cur.execute("SELECT room_id FROM rooms WHERE slug = %s", (slug,))
         room_id = cur.fetchone()[0]
-        # Добавляем "🏆 Победа" (безопасно)
         ensure_hall_of_fame_exercise(room_id)
     except Exception as e:
         conn.rollback()
@@ -115,7 +103,6 @@ def create_room(slug, title, password, tg_chat_id=None):
         conn.close()
 
 def game_preset_exists(room_id, ex_name, val):
-    """Проверяет, есть ли уже игра с таким же упражнением и значением"""
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute(
