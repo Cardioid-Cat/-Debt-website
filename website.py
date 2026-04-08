@@ -6,6 +6,10 @@ import requests
 website = Flask(__name__)
 website.secret_key = os.environ.get("FLASK_SECRET_KEY", "vova_top_secret_777")
 
+# Инициализация БД: добавляем "🏆 Победа" во все комнаты при старте
+with website.app_context():
+    db.init_all_rooms()
+
 def send_tg_notification(room, text):
     token = os.environ.get("TELEGRAM_BOT_TOKEN")
     chat_id = room.get("tg_chat_id")
@@ -46,7 +50,7 @@ def index(slug=None):
     ex_map = {ex['name']: ex['unit_type'] for ex in ex_types}
     ex_icons = {ex['name']: ("🕒" if ex['unit_type'] == 'time' else "💪") for ex in ex_types}
 
-    # Считаем Зал Славы (Победы)
+    # Зал Славы (Победы)
     hof_data = {}
     for l in logs:
         if l.get('exercise_type') == "🏆 Победа":
@@ -58,7 +62,7 @@ def index(slug=None):
     hall_of_fame.sort(key=lambda x: x['wins'], reverse=True)
 
     for l in logs:
-        if l.get('exercise_type') == "🏆 Победа": continue # Пропускаем кубки в таблице долгов
+        if l.get('exercise_type') == "🏆 Победа": continue
         p_id = l.get('profile_id')
         p_name_in_log = l.get('profile_name')
         name = id_to_name.get(p_id) or p_name_in_log
@@ -88,10 +92,15 @@ def add_game():
         name = request.form.get('name', '').strip()
         ex_name = request.form.get('ex_name')
         val_raw = request.form.get('val', '').strip()
-        u_type = db.get_ex_type(ex_name, room['room_id'])
         val_numeric = time_to_seconds(val_raw)
         if val_numeric is not None and name:
-            db.add_game_preset(room['room_id'], name, ex_name, val_numeric, u_type)
+            # Проверяем, нет ли уже игры с таким же упражнением и значением
+            if db.game_preset_exists(room['room_id'], ex_name, val_numeric):
+                flash(f"Игра с наказанием '{ex_name} {val_raw}' уже существует!")
+            else:
+                db.add_game_preset(room['room_id'], name, ex_name, val_numeric)
+        else:
+            flash("Некорректное значение наказания")
     return redirect(url_for('index', room=slug))
 
 @website.route('/add_exercise', methods=['POST'])
@@ -102,9 +111,10 @@ def add_exercise():
         name = request.form.get('name', '').strip()
         u_type = request.form.get('unit_type')
         if name:
-            # Запрещаем создание служебного упражнения "🏆 Победа"
             if name == "🏆 Победа":
-                flash("Нельзя создать упражнение с именем «🏆 Победа» – оно используется для Зала Славы.")
+                flash("Нельзя создать упражнение «🏆 Победа» – оно создаётся автоматически.")
+            elif db.exercise_type_exists(room['room_id'], name):
+                flash(f"Упражнение «{name}» уже существует в этой комнате.")
             else:
                 db.add_exercise_type(room['room_id'], name, u_type)
     return redirect(url_for('index', room=slug))
@@ -116,7 +126,6 @@ def add_profile():
     if room and session.get(f"auth_{room['room_id']}"):
         name = request.form.get('name', '').strip()
         if name:
-            # Проверка на существование такого же имени
             if db.profile_exists(room['room_id'], name):
                 flash("Участник с таким именем уже существует в этой комнате.")
             else:
@@ -131,7 +140,8 @@ def delete_item(type, id_val):
         if type == 'game': 
             db.delete_game_preset(id_val)
         elif type == 'ex': 
-            db.delete_exercise_type(id_val, room['room_id'])
+            if not db.delete_exercise_type(id_val, room['room_id']):
+                flash("Нельзя удалить служебное упражнение «🏆 Победа».")
         elif type == 'profile': 
             db.delete_profile(id_val, room['room_id'])
     return redirect(url_for('index', room=slug))
@@ -180,7 +190,7 @@ def play_game():
                     db.add_log(p['id'], game['ex_name'], game['val'], room['room_id'])
                     losers_names.append(p['name'])
                 else:
-                    # Начисляем 1 победу в "Зал славы"
+                    # Начисляем победу
                     db.add_log(p['id'], "🏆 Победа", 1, room['room_id'])
             
             if losers_names:
