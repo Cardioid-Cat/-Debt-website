@@ -100,6 +100,15 @@ def add_exercise_type(room_id, name, unit_type):
     cur.close()
     conn.close()
 
+def profile_exists(room_id, name):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT 1 FROM profiles WHERE room_id = %s AND name = %s", (room_id, name))
+    exists = cur.fetchone() is not None
+    cur.close()
+    conn.close()
+    return exists
+
 def add_profile(room_id, name):
     conn = get_db_connection()
     cur = conn.cursor()
