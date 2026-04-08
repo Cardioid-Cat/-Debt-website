@@ -101,7 +101,12 @@ def add_exercise():
     if room and session.get(f"auth_{room['room_id']}"):
         name = request.form.get('name', '').strip()
         u_type = request.form.get('unit_type')
-        if name: db.add_exercise_type(room['room_id'], name, u_type)
+        if name:
+            # Запрещаем создание служебного упражнения "🏆 Победа"
+            if name == "🏆 Победа":
+                flash("Нельзя создать упражнение с именем «🏆 Победа» – оно используется для Зала Славы.")
+            else:
+                db.add_exercise_type(room['room_id'], name, u_type)
     return redirect(url_for('index', room=slug))
 
 @website.route('/add_profile', methods=['POST'])
@@ -110,7 +115,12 @@ def add_profile():
     room = db.get_room(slug)
     if room and session.get(f"auth_{room['room_id']}"):
         name = request.form.get('name', '').strip()
-        if name: db.add_profile(room['room_id'], name)
+        if name:
+            # Проверка на существование такого же имени
+            if db.profile_exists(room['room_id'], name):
+                flash("Участник с таким именем уже существует в этой комнате.")
+            else:
+                db.add_profile(room['room_id'], name)
     return redirect(url_for('index', room=slug))
 
 @website.route('/delete_<type>/<id_val>')
@@ -161,20 +171,23 @@ def play_game():
     games = db.get_data("games_presets", room['room_id'])
     game = next((g for g in games if g['game_name'] == game_name), None)
     if game and winner_ids:
-        all_profiles = db.get_data("profiles", room['room_id'])
-        losers_names = []
-        for p in all_profiles:
-            p_id_str = str(p['id'])
-            if p_id_str not in winner_ids:
-                db.add_log(p['id'], game['ex_name'], int(game['val']), room['room_id'])
-                losers_names.append(p['name'])
-            else:
-                # Начисляем 1 победу в "Зал славы"
-                db.add_log(p['id'], "🏆 Победа", 1, room['room_id'])
-        
-        if losers_names:
-            msg = f"🎮 Игра: {game_name}\n💀 Проиграли: {', '.join(losers_names)} (+{game['val']})"
-            send_tg_notification(room, msg)
+        try:
+            all_profiles = db.get_data("profiles", room['room_id'])
+            losers_names = []
+            for p in all_profiles:
+                p_id_str = str(p['id'])
+                if p_id_str not in winner_ids:
+                    db.add_log(p['id'], game['ex_name'], game['val'], room['room_id'])
+                    losers_names.append(p['name'])
+                else:
+                    # Начисляем 1 победу в "Зал славы"
+                    db.add_log(p['id'], "🏆 Победа", 1, room['room_id'])
+            
+            if losers_names:
+                msg = f"🎮 Игра: {game_name}\n💀 Проиграли: {', '.join(losers_names)} (+{game['val']})"
+                send_tg_notification(room, msg)
+        except Exception as e:
+            flash(f"Ошибка при обработке игры: {e}")
     return redirect(url_for('index', room=slug))
 
 @website.route('/login', methods=['POST'])
