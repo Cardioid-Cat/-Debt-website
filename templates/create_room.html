@@ -111,9 +111,9 @@
             align-items: center;
             gap: 10px;
         }
-        /* Попап */
-        .popup {
-            position: absolute;
+        /* Попап – теперь вне карточки, позиционируем относительно body */
+        .global-popup {
+            position: fixed;
             background: #ffffff;
             border: 1px solid #E2E8F0;
             border-radius: 12px;
@@ -128,12 +128,12 @@
             transition: opacity 0.2s, visibility 0.2s;
             pointer-events: none;
         }
-        .popup.active {
+        .global-popup.active {
             opacity: 1;
             visibility: visible;
             pointer-events: auto;
         }
-        .popup::before {
+        .global-popup::before {
             content: '';
             position: absolute;
             top: -8px;
@@ -145,7 +145,7 @@
             border-bottom: 8px solid #ffffff;
             filter: drop-shadow(0 -1px 1px rgba(0,0,0,0.05));
         }
-        .popup::after {
+        .global-popup::after {
             content: '';
             position: absolute;
             top: -9px;
@@ -157,7 +157,7 @@
             border-bottom: 9px solid #E2E8F0;
             z-index: -1;
         }
-        .popup-close {
+        .global-popup .popup-close {
             position: absolute;
             top: 8px;
             right: 12px;
@@ -166,16 +166,16 @@
             font-size: 14px;
             pointer-events: auto;
         }
-        .popup-close:hover {
+        .global-popup .popup-close:hover {
             color: #FF5A50;
         }
-        .popup p {
+        .global-popup p {
             margin: 0;
             padding-right: 20px;
             line-height: 1.4;
         }
         @media (max-width: 640px) {
-            .popup {
+            .global-popup {
                 max-width: 240px;
                 font-size: 12px;
             }
@@ -198,16 +198,12 @@
             <input type="text" name="title" required>
         </div>
 
-        <div class="form-group" id="slug-group">
+        <div class="form-group">
             <div class="label-row">
                 <label>Придумайте адрес для ссылки (напр: matrix, kachalka77)</label>
                 <i class="far fa-question-circle help-icon" data-popup="slug-popup"></i>
             </div>
             <input type="text" name="slug" required>
-            <div id="slug-popup" class="popup">
-                <span class="popup-close">&times;</span>
-                <p>Этот текст будет в конце ссылки вашего сайта.<br>Пример: <strong>ваш-сайт.railway.app/ваш-адрес</strong></p>
-            </div>
         </div>
 
         <div class="form-group">
@@ -218,16 +214,12 @@
             <i class="far fa-eye password-toggle" onclick="togglePass()"></i>
         </div>
 
-        <div class="form-group" id="tg-group">
+        <div class="form-group">
             <div class="label-row">
                 <label>ID чата в Telegram (необязательно)</label>
                 <i class="far fa-question-circle help-icon" data-popup="tg-popup"></i>
             </div>
             <input type="text" name="tg_id">
-            <div id="tg-popup" class="popup">
-                <span class="popup-close">&times;</span>
-                <p>Для отправки уведомлений о долгах. Как получить ID: напишите <strong>@userinfobot</strong> в Telegram, он покажет ваш ID. Для группы добавьте бота и получите ID через <strong>@getidsbot</strong>.</p>
-            </div>
         </div>
 
         {% with messages = get_flashed_messages() %}
@@ -246,75 +238,92 @@
     </form>
 </div>
 
+<!-- Глобальные попапы (в конце body, чтобы позиционировать относительно окна) -->
+<div id="slug-popup" class="global-popup">
+    <span class="popup-close">&times;</span>
+    <p>Этот текст будет в конце ссылки вашего сайта.<br>Пример: <strong>ваш-сайт.railway.app/ваш-адрес</strong></p>
+</div>
+<div id="tg-popup" class="global-popup">
+    <span class="popup-close">&times;</span>
+    <p>Для получения уведомлений о долгах:<br>
+    1. Добавьте бота <strong>@Cardioid_Cat_AllBot</strong> в вашу группу.<br>
+    2. Назначьте его администратором.<br>
+    3. ID чата можно узнать у бота <strong>@getidsbot</strong>.<br>
+    Уведомления будут приходить только для этой комнаты.</p>
+</div>
+
 <script>
     function togglePass() {
         const passInput = document.getElementById('passwordField');
         passInput.type = passInput.type === 'password' ? 'text' : 'password';
     }
 
-    // Позиционирование попапа
+    // Позиционирование попапа относительно иконки
     function positionPopup(icon, popup) {
         const rect = icon.getBoundingClientRect();
         const popupRect = popup.getBoundingClientRect();
-        const scrollTop = window.scrollY || document.documentElement.scrollTop;
-        const scrollLeft = window.scrollX || document.documentElement.scrollLeft;
-
-        // Позиция по вертикали: под иконкой
-        let top = rect.bottom + scrollTop + 8;
-        // Позиция по горизонтали: выравнивание по левому краю иконки, но не вылезать за экран
-        let left = rect.left + scrollLeft;
+        let top = rect.bottom + window.scrollY + 8;
+        let left = rect.left + window.scrollX;
+        
+        // Корректировка, чтобы не вылезать за правый край
         if (left + popupRect.width > window.innerWidth - 10) {
             left = window.innerWidth - popupRect.width - 10;
         }
         if (left < 10) left = 10;
-
+        
         popup.style.left = left + 'px';
         popup.style.top = top + 'px';
-
-        // Корректировка позиции стрелки (чтобы указывала на иконку)
-        const arrowOffset = rect.left + scrollLeft - left + (rect.width / 2) - 8;
-        popup.style.setProperty('--arrow-left', Math.max(10, arrowOffset) + 'px');
-        // Для псевдоэлементов ::before и ::after нужно обновить left через CSS
-        popup.style.setProperty('--before-left', Math.max(10, arrowOffset) + 'px');
-        popup.style.setProperty('--after-left', (Math.max(10, arrowOffset) - 1) + 'px');
+        
+        // Смещаем стрелку, чтобы указывала на центр иконки
+        const arrowOffset = (rect.left + window.scrollX) - left + (rect.width / 2) - 8;
+        popup.style.setProperty('--arrow-left', Math.max(8, Math.min(arrowOffset, popupRect.width - 24)) + 'px');
+        popup.style.setProperty('--before-left', 'var(--arrow-left)');
+        popup.style.setProperty('--after-left', 'calc(var(--arrow-left) - 1px)');
     }
 
-    // Инициализация попапов
+    // Инициализация всех попапов
     document.querySelectorAll('.help-icon').forEach(icon => {
         const popupId = icon.getAttribute('data-popup');
         const popup = document.getElementById(popupId);
         if (!popup) return;
-
-        // Добавляем стили для стрелок
-        if (!popup.style.position) popup.style.position = 'absolute';
-        const style = document.createElement('style');
-        style.textContent = `
-            #${popupId}::before { left: var(--before-left, 20px) !important; }
-            #${popupId}::after { left: var(--after-left, 19px) !important; }
-        `;
-        document.head.appendChild(style);
-
+        
+        // Добавляем стили для динамического положения стрелки
+        if (!document.getElementById('popup-arrow-style')) {
+            const style = document.createElement('style');
+            style.id = 'popup-arrow-style';
+            style.textContent = `
+                .global-popup::before { left: var(--before-left, 20px) !important; }
+                .global-popup::after { left: var(--after-left, 19px) !important; }
+            `;
+            document.head.appendChild(style);
+        }
+        
         function openPopup(e) {
             e.stopPropagation();
-            document.querySelectorAll('.popup.active').forEach(p => {
+            // Закрываем другие
+            document.querySelectorAll('.global-popup.active').forEach(p => {
                 if (p !== popup) p.classList.remove('active');
             });
             positionPopup(icon, popup);
             popup.classList.add('active');
         }
-
+        
         function closePopup() {
             popup.classList.remove('active');
         }
-
+        
         icon.addEventListener('click', openPopup);
         const closeBtn = popup.querySelector('.popup-close');
         if (closeBtn) closeBtn.addEventListener('click', (e) => { e.stopPropagation(); closePopup(); });
+        
+        // Закрытие по клику вне
         document.addEventListener('click', function(event) {
             if (popup.classList.contains('active') && !popup.contains(event.target) && !icon.contains(event.target)) {
                 closePopup();
             }
         });
+        
+        // При ресайзе и скролле перепозиционируем, если открыт
         window.addEventListener('resize', () => { if (popup.classList.contains('active')) positionPopup(icon, popup); });
         window.addEventListener('scroll', () => { if (popup.classList.contains('active')) positionPopup(icon, popup); });
     });
