@@ -46,7 +46,19 @@ def index(slug=None):
     ex_map = {ex['name']: ex['unit_type'] for ex in ex_types}
     ex_icons = {ex['name']: ("🕒" if ex['unit_type'] == 'time' else "💪") for ex in ex_types}
 
+    # Считаем Зал Славы (Победы)
+    hof_data = {}
     for l in logs:
+        if l.get('exercise_type') == "🏆 Победа":
+            p_id = l.get('profile_id')
+            name = id_to_name.get(p_id) or l.get('profile_name', 'Кто-то')
+            hof_data[name] = hof_data.get(name, 0) + 1
+    
+    hall_of_fame = [{"name": k, "wins": v} for k, v in hof_data.items()]
+    hall_of_fame.sort(key=lambda x: x['wins'], reverse=True)
+
+    for l in logs:
+        if l.get('exercise_type') == "🏆 Победа": continue # Пропускаем кубки в таблице долгов
         p_id = l.get('profile_id')
         p_name_in_log = l.get('profile_name')
         name = id_to_name.get(p_id) or p_name_in_log
@@ -65,7 +77,8 @@ def index(slug=None):
 
     return render_template('index.html', room=room, profiles=profiles, ex_types=ex_types, 
                            games=games, summary=summary, ex_map=ex_map, 
-                           ex_icons=ex_icons, is_admin=is_admin, last_action_text=last_action_text)
+                           ex_icons=ex_icons, is_admin=is_admin, last_action_text=last_action_text,
+                           hall_of_fame=hall_of_fame)
 
 @website.route('/add_game', methods=['POST'])
 def add_game():
@@ -77,7 +90,7 @@ def add_game():
         val_raw = request.form.get('val', '').strip()
         u_type = db.get_ex_type(ex_name, room['room_id'])
         val_numeric = time_to_seconds(val_raw)
-        if val_numeric is not None:
+        if val_numeric is not None and name:
             db.add_game_preset(room['room_id'], name, ex_name, val_numeric, u_type)
     return redirect(url_for('index', room=slug))
 
@@ -100,7 +113,6 @@ def add_profile():
         if name: db.add_profile(room['room_id'], name)
     return redirect(url_for('index', room=slug))
 
-# --- ИСПРАВЛЕННЫЙ РОУТ (убрали <int:>) ---
 @website.route('/delete_<type>/<id_val>')
 def delete_item(type, id_val):
     slug = request.args.get('slug')
@@ -152,9 +164,14 @@ def play_game():
         all_profiles = db.get_data("profiles", room['room_id'])
         losers_names = []
         for p in all_profiles:
-            if str(p['id']) not in winner_ids:
+            p_id_str = str(p['id'])
+            if p_id_str not in winner_ids:
                 db.add_log(p['id'], game['ex_name'], int(game['val']), room['room_id'])
                 losers_names.append(p['name'])
+            else:
+                # Начисляем 1 победу в "Зал славы"
+                db.add_log(p['id'], "🏆 Победа", 1, room['room_id'])
+        
         if losers_names:
             msg = f"🎮 Игра: {game_name}\n💀 Проиграли: {', '.join(losers_names)} (+{game['val']})"
             send_tg_notification(room, msg)
