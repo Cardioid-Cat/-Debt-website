@@ -55,7 +55,11 @@
         .help-icon {
             color: #A0AEC0;
             font-size: 14px;
-            cursor: help;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .help-icon:hover {
+            color: #FF5A50;
         }
         input {
             width: 100%;
@@ -80,7 +84,7 @@
             cursor: pointer;
         }
         .btn-submit {
-            background-color: #FF5A50; /* Тот самый красный цвет */
+            background-color: #FF5A50;
             color: white;
             border: none;
             border-radius: 10px;
@@ -107,6 +111,75 @@
             align-items: center;
             gap: 10px;
         }
+        /* Стили для красивого попапа */
+        .popup {
+            position: absolute;
+            background: #ffffff;
+            border: 1px solid #E2E8F0;
+            border-radius: 12px;
+            padding: 12px 16px;
+            font-size: 13px;
+            color: #2D3748;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.02);
+            max-width: 260px;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.2s, visibility 0.2s;
+            pointer-events: none;
+        }
+        .popup.active {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+        }
+        .popup::before {
+            content: '';
+            position: absolute;
+            top: -8px;
+            left: 20px;
+            width: 0;
+            height: 0;
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-bottom: 8px solid #ffffff;
+            filter: drop-shadow(0 -1px 1px rgba(0,0,0,0.05));
+        }
+        .popup::after {
+            content: '';
+            position: absolute;
+            top: -9px;
+            left: 19px;
+            width: 0;
+            height: 0;
+            border-left: 9px solid transparent;
+            border-right: 9px solid transparent;
+            border-bottom: 9px solid #E2E8F0;
+            z-index: -1;
+        }
+        .popup-close {
+            position: absolute;
+            top: 8px;
+            right: 12px;
+            color: #A0AEC0;
+            cursor: pointer;
+            font-size: 12px;
+            pointer-events: auto;
+        }
+        .popup-close:hover {
+            color: #FF5A50;
+        }
+        .popup p {
+            margin: 0;
+            padding-right: 20px;
+            line-height: 1.4;
+        }
+        @media (max-width: 640px) {
+            .popup {
+                max-width: 220px;
+                font-size: 12px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -125,12 +198,16 @@
             <input type="text" name="title" required>
         </div>
 
-        <div class="form-group">
+        <div class="form-group" id="slug-group">
             <div class="label-row">
                 <label>Придумайте адрес для ссылки (напр: matrix, kachalka77)</label>
-                <i class="far fa-question-circle help-icon" title="Этот текст будет в конце ссылки вашего сайта"></i>
+                <i class="far fa-question-circle help-icon" data-popup="slug-popup"></i>
             </div>
             <input type="text" name="slug" required>
+            <div id="slug-popup" class="popup">
+                <span class="popup-close">&times;</span>
+                <p>Этот текст будет в конце ссылки вашего сайта.<br>Пример: <strong>ваш-сайт.railway.app/ваш-адрес</strong></p>
+            </div>
         </div>
 
         <div class="form-group">
@@ -141,13 +218,18 @@
             <i class="far fa-eye password-toggle" onclick="togglePass()"></i>
         </div>
 
-        <div class="form-group">
+        <div class="form-group" id="tg-group">
             <div class="label-row">
                 <label>ID чата в Telegram (необязательно)</label>
-                <i class="far fa-question-circle help-icon" title="Для отправки уведомлений о долгах"></i>
+                <i class="far fa-question-circle help-icon" data-popup="tg-popup"></i>
             </div>
             <input type="text" name="tg_id">
+            <div id="tg-popup" class="popup">
+                <span class="popup-close">&times;</span>
+                <p>Для отправки уведомлений о долгах. Как получить ID: напишите <strong>@userinfobot</strong> в Telegram, он покажет ваш ID. Для группы добавьте бота и получите ID через <strong>@getidsbot</strong>.</p>
+            </div>
         </div>
+
         {% with messages = get_flashed_messages() %}
           {% if messages %}
             <div class="alert-container">
@@ -169,6 +251,80 @@
         const passInput = document.getElementById('passwordField');
         passInput.type = passInput.type === 'password' ? 'text' : 'password';
     }
+
+    // Обработка всплывающих подсказок
+    document.querySelectorAll('.help-icon').forEach(icon => {
+        const popupId = icon.getAttribute('data-popup');
+        const popup = document.getElementById(popupId);
+        if (!popup) return;
+
+        // Позиционирование попапа
+        function positionPopup() {
+            const rect = icon.getBoundingClientRect();
+            const popupRect = popup.getBoundingClientRect();
+            const scrollTop = window.scrollY || document.documentElement.scrollTop;
+            const scrollLeft = window.scrollX || document.documentElement.scrollLeft;
+
+            let top = rect.bottom + scrollTop + 8;
+            let left = rect.left + scrollLeft;
+
+            // Не вылезать за правый край
+            if (left + popupRect.width > window.innerWidth) {
+                left = window.innerWidth - popupRect.width - 15;
+            }
+            // Не вылезать за левый край
+            if (left < 15) left = 15;
+            // Корректировка стрелки
+            const arrowLeft = rect.left + scrollLeft - left + 20;
+            popup.style.setProperty('--arrow-left', arrowLeft + 'px');
+            popup.style.left = left + 'px';
+            popup.style.top = top + 'px';
+            
+            // Устанавливаем позицию стрелки
+            popup.style.setProperty('--arrow-left', arrowLeft + 'px');
+            popup.style.setProperty('--after-left', (arrowLeft - 1) + 'px');
+        }
+
+        // Открыть попап
+        function openPopup(e) {
+            e.stopPropagation();
+            // Закрыть все остальные
+            document.querySelectorAll('.popup.active').forEach(p => {
+                if (p !== popup) p.classList.remove('active');
+            });
+            positionPopup();
+            popup.classList.add('active');
+        }
+
+        // Закрыть попап
+        function closePopup() {
+            popup.classList.remove('active');
+        }
+
+        // Клик на иконку
+        icon.addEventListener('click', openPopup);
+
+        // Клик на крестик внутри попапа
+        const closeBtn = popup.querySelector('.popup-close');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                closePopup();
+            });
+        }
+
+        // Клик вне попапа – закрываем
+        document.addEventListener('click', function(event) {
+            if (popup.classList.contains('active') && !popup.contains(event.target) && !icon.contains(event.target)) {
+                closePopup();
+            }
+        });
+
+        // При ресайзе перепозиционируем
+        window.addEventListener('resize', () => {
+            if (popup.classList.contains('active')) positionPopup();
+        });
+    });
 </script>
 
 </body>
