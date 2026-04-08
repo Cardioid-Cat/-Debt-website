@@ -85,7 +85,7 @@
                     {% for g in games %}
                     <div class="submenu-item">
                         <span>{{ g.game_name }} ({{ g.val }})</span>
-                        <button class="btn-del-tiny" onclick="showDelModal('/delete_game/{{ g.id }}', '{{ g.game_name }}')"><i class="bi bi-trash"></i></button>
+                        <button class="btn-del-tiny" onclick="showDelModal('/delete_game/{{ g.id }}', {{ g.game_name|tojson }})"><i class="bi bi-trash"></i></button>
                     </div>
                     {% endfor %}
                 </div>
@@ -107,7 +107,7 @@
                             {% if ex.unit_type == 'time' %}🕒{% else %}💪{% endif %}
                             {{ ex.name }}
                         </span>
-                        <button class="btn-del-tiny" onclick="showDelModal('/delete_ex/{{ ex.id }}', '{{ ex.name }}')"><i class="bi bi-trash"></i></button>
+                        <button class="btn-del-tiny" onclick="showDelModal('/delete_ex/{{ ex.id }}', {{ ex.name|tojson }})"><i class="bi bi-trash"></i></button>
                     </div>
                     {% endfor %}
                 </div>
@@ -122,7 +122,7 @@
                     {% for p in profiles %}
                     <div class="submenu-item">
                         <span>{{ p.name }}</span>
-                        <button class="btn-del-tiny" onclick="showDelModal('/delete_profile/{{ p.id }}', '{{ p.name }}')"><i class="bi bi-trash"></i></button>
+                        <button class="btn-del-tiny" onclick="showDelModal('/delete_profile/{{ p.id }}', {{ p.name|tojson }})"><i class="bi bi-trash"></i></button>
                     </div>
                     {% endfor %}
                 </div>
