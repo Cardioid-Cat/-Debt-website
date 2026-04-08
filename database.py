@@ -104,6 +104,7 @@ def create_room(slug, title, password, tg_chat_id=None):
         conn.close()
 
 def game_preset_exists(room_id, ex_name, val):
+    """Проверка на дубликат по упражнению и значению"""
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute(
@@ -115,19 +116,39 @@ def game_preset_exists(room_id, ex_name, val):
     conn.close()
     return exists
 
-def add_game_preset(room_id, game_name, ex_name, val, unit_type):
-    if game_preset_exists(room_id, ex_name, val):
-        return False
+def game_name_exists(room_id, game_name):
+    """Проверка уникальности названия игры в комнате"""
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("""
-        INSERT INTO games_presets (room_id, game_name, ex_name, val, unit_type) 
-        VALUES (%s, %s, %s, %s, %s)
-    """, (room_id, game_name, ex_name, val, unit_type))
-    conn.commit()
+    cur.execute(
+        "SELECT 1 FROM games_presets WHERE room_id = %s AND game_name = %s",
+        (room_id, game_name)
+    )
+    exists = cur.fetchone() is not None
     cur.close()
     conn.close()
-    return True
+    return exists
+
+def add_game_preset(room_id, game_name, ex_name, val, unit_type):
+    if game_name_exists(room_id, game_name):
+        return False, "Игра с таким названием уже существует"
+    if game_preset_exists(room_id, ex_name, val):
+        return False, "Игра с таким наказанием уже существует"
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            INSERT INTO games_presets (room_id, game_name, ex_name, val, unit_type) 
+            VALUES (%s, %s, %s, %s, %s)
+        """, (room_id, game_name, ex_name, val, unit_type))
+        conn.commit()
+        return True, None
+    except Exception as e:
+        conn.rollback()
+        return False, str(e)
+    finally:
+        cur.close()
+        conn.close()
 
 def exercise_type_exists(room_id, name):
     conn = get_db_connection()
