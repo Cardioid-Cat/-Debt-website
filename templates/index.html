@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <title>💪 {{ room.title }}</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=yes">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <style>
         :root { --sidebar-bg: #F1F3F9; --accent-red: #FF5A50; --border-color: #E2E8F0; }
         body { background: #FFFFFF; font-family: 'Inter', sans-serif; display: flex; min-height: 100vh; margin: 0; }
-        .sidebar { width: 260px; background: var(--sidebar-bg); border-right: 1px solid var(--border-color); padding: 25px 15px; display: flex; flex-direction: column; transition: width 0.3s; position: relative; overflow-y: auto; }
+        .sidebar { width: 260px; background: var(--sidebar-bg); border-right: 1px solid var(--border-color); padding: 25px 15px; display: flex; flex-direction: column; transition: width 0.3s, transform 0.3s; position: relative; overflow-y: auto; }
         .sidebar.collapsed { width: 85px; padding: 25px 12px; }
         .sidebar.collapsed .sidebar-text, .sidebar.collapsed .undo-section, .sidebar.collapsed .submenu-settings { display: none !important; }
         .toggle-btn { position: absolute; right: 5px; top: 20px; background: #fff; border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer; z-index: 100; padding: 2px 5px; }
@@ -59,9 +59,60 @@
             font-size: 1rem;
             margin-left: 10px;
         }
+        /* Адаптивность для телефонов */
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                left: 0;
+                top: 0;
+                bottom: 0;
+                z-index: 1000;
+                transform: translateX(-100%);
+                width: 260px;
+                transition: transform 0.3s;
+            }
+            .sidebar.mobile-open {
+                transform: translateX(0);
+            }
+            .sidebar.collapsed {
+                width: 260px;
+                transform: translateX(-100%);
+            }
+            .main-content {
+                width: 100%;
+                padding: 15px !important;
+            }
+            .ex-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .toggle-btn {
+                display: none;
+            }
+            .mobile-menu-btn {
+                display: block;
+                position: fixed;
+                top: 15px;
+                left: 15px;
+                z-index: 1001;
+                background: var(--accent-red);
+                color: white;
+                border: none;
+                border-radius: 8px;
+                padding: 8px 12px;
+                font-size: 1.2rem;
+            }
+        }
+        @media (min-width: 769px) {
+            .mobile-menu-btn {
+                display: none;
+            }
+        }
     </style>
 </head>
 <body>
+
+    <!-- Кнопка для мобильного меню -->
+    <button class="mobile-menu-btn" id="mobileMenuBtn" onclick="toggleMobileSidebar()"><i class="bi bi-list"></i></button>
 
     <div class="sidebar" id="sidebar">
         <button class="toggle-btn" onclick="toggleSidebar()"><i id="toggle-icon" class="bi bi-chevron-double-left"></i></button>
@@ -76,10 +127,12 @@
                         <input type="hidden" name="slug" value="{{ room.slug }}">
                         <input type="text" name="name" class="form-control form-control-sm mb-1" placeholder="Название игры" required pattern=".*\S.*" title="Название не может состоять только из пробелов" style="font-size: 0.75rem;">
                         <select name="ex_name" class="form-select form-select-sm mb-1" style="font-size: 0.75rem;" required onchange="updateGameValPlaceholder(this)">
-    <option value="" disabled selected>Упражнение</option>
-    {% for ex in ex_types %}<option value="{{ ex.name }}" data-unit="{{ ex.unit_type }}">{{ ex.name }}</option>{% endfor %}
-</select>
-<input type="text" name="val" id="game_val_input" class="form-control form-control-sm mb-1" placeholder="Кол-во или ММ:СС" required pattern=".*\S.*" style="font-size: 0.75rem;">
+                            <option value="" disabled selected>Упражнение</option>
+                            {% for ex in ex_types if ex.name != "🏆 Победа" %}
+                                <option value="{{ ex.name }}" data-unit="{{ ex.unit_type }}">{{ ex.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <input type="text" name="val" id="game_val_input" class="form-control form-control-sm mb-1" placeholder="Кол-во или ММ:СС" required pattern=".*\S.*" style="font-size: 0.75rem;">
                         <button type="submit" class="btn btn-dark btn-sm w-100" style="font-size: 0.7rem;">+ Добавить</button>
                     </form>
                     {% for g in games %}
@@ -101,7 +154,7 @@
                         </select>
                         <button type="submit" class="btn btn-dark btn-sm w-100" style="font-size: 0.7rem;">+ Добавить</button>
                     </form>
-                    {% for ex in ex_types %}
+                    {% for ex in ex_types if ex.name != "🏆 Победа" %}
                     <div class="submenu-item">
                         <span>
                             {% if ex.unit_type == 'time' %}🕒{% else %}💪{% endif %}
@@ -176,14 +229,12 @@
                 </select>
                 <input type="hidden" name="ex_name" id="selected-ex-name" required>
                 <div class="ex-grid mb-4">
-    {% for ex in ex_types %}
-        {% if ex.name != "🏆 Победа" %}
+    {% for ex in ex_types if ex.name != "🏆 Победа" %}
             <div class="btn-check-custom" 
                  data-unit="{{ ex.unit_type }}" 
                  onclick="selectExercise(this, '{{ ex.name }}')">
                  {% if ex.unit_type == 'time' %}🕒{% else %}💪{% endif %} {{ ex.name }}
             </div>
-        {% endif %}
     {% endfor %}
 </div>
                 <div id="vvod-controls" style="display:none;">
@@ -360,7 +411,7 @@
             document.getElementById('selected-ex-name').value = name;
             document.getElementById('vvod-controls').style.display = 'block';
         }
-        // Новая функция удаления без проблем с кавычками
+        // Функция удаления через data-атрибуты
         document.querySelectorAll('.btn-del-tiny').forEach(btn => {
             btn.addEventListener('click', function(e) {
                 e.preventDefault();
@@ -373,19 +424,34 @@
             });
         });
         function updateGameValPlaceholder(selectElement) {
-    var selectedOption = selectElement.options[selectElement.selectedIndex];
-    var unit = selectedOption.getAttribute('data-unit');
-    var inputField = document.getElementById('game_val_input');
-    if (unit === 'time') {
-        inputField.placeholder = "Кол-во или ММ:СС";
-        inputField.pattern = ".*\\S.*";
-        inputField.title = "";
-    } else {
-        inputField.placeholder = "Только число";
-        inputField.pattern = "^[0-9]+$";
-        inputField.title = "Введите только число";
-    }
-}
+            var selectedOption = selectElement.options[selectElement.selectedIndex];
+            var unit = selectedOption.getAttribute('data-unit');
+            var inputField = document.getElementById('game_val_input');
+            if (unit === 'time') {
+                inputField.placeholder = "Кол-во или ММ:СС (1:30)";
+                inputField.pattern = ".*\\S.*";
+                inputField.title = "";
+            } else {
+                inputField.placeholder = "Только число (например, 50)";
+                inputField.pattern = "^[0-9]+$";
+                inputField.title = "Введите только число";
+            }
+        }
+        // Мобильное меню
+        function toggleMobileSidebar() {
+            const sb = document.getElementById('sidebar');
+            sb.classList.toggle('mobile-open');
+        }
+        // Закрывать меню при клике вне его на мобильных
+        document.addEventListener('click', function(event) {
+            const sb = document.getElementById('sidebar');
+            const btn = document.getElementById('mobileMenuBtn');
+            if (window.innerWidth <= 768 && sb.classList.contains('mobile-open')) {
+                if (!sb.contains(event.target) && !btn.contains(event.target)) {
+                    sb.classList.remove('mobile-open');
+                }
+            }
+        });
     </script>
 </body>
 </html>
