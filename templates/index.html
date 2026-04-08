@@ -128,16 +128,16 @@
                         <input type="text" name="name" class="form-control form-control-sm mb-1" placeholder="Название игры" required pattern=".*\S.*" title="Название не может состоять только из пробелов" style="font-size: 0.75rem;">
                         <select name="ex_name" class="form-select form-select-sm mb-1" style="font-size: 0.75rem;" required onchange="updateGameValPlaceholder(this)">
                             <option value="" disabled selected>Упражнение</option>
-                            {% for ex in ex_types if ex.name != "🏆 Победа" %}
+                            {% for ex in ex_types|sort(attribute='name') if ex.name != "🏆 Победа" %}
                                 <option value="{{ ex.name }}" data-unit="{{ ex.unit_type }}">{{ ex.name }}</option>
                             {% endfor %}
                         </select>
                         <input type="text" name="val" id="game_val_input" class="form-control form-control-sm mb-1" placeholder="Кол-во или ММ:СС" required pattern=".*\S.*" style="font-size: 0.75rem;">
                         <button type="submit" class="btn btn-dark btn-sm w-100" style="font-size: 0.7rem;">+ Добавить</button>
                     </form>
-                    {% for g in games %}
+                    {% for g in games|sort(attribute='game_name') %}
                     <div class="submenu-item">
-                        <span>{{ g.game_name }} ({{ g.val }})</span>
+                        <span>{{ g.game_name }} ({{ g.val }} {{ g.ex_name }})</span>
                         <button class="btn-del-tiny" data-url="/delete_game/{{ g.id }}" data-name="{{ g.game_name }}"><i class="bi bi-trash"></i></button>
                     </div>
                     {% endfor %}
@@ -154,7 +154,7 @@
                         </select>
                         <button type="submit" class="btn btn-dark btn-sm w-100" style="font-size: 0.7rem;">+ Добавить</button>
                     </form>
-                    {% for ex in ex_types if ex.name != "🏆 Победа" %}
+                    {% for ex in ex_types|sort(attribute='name') if ex.name != "🏆 Победа" %}
                     <div class="submenu-item">
                         <span>
                             {% if ex.unit_type == 'time' %}🕒{% else %}💪{% endif %}
@@ -172,7 +172,7 @@
                         <input type="text" name="name" class="form-control form-control-sm mb-1" placeholder="Имя" required pattern=".*\S.*" title="Имя не может состоять только из пробелов" style="font-size: 0.75rem;">
                         <button type="submit" class="btn btn-dark btn-sm w-100" style="font-size: 0.7rem;">+ Добавить</button>
                     </form>
-                    {% for p in profiles %}
+                    {% for p in profiles|sort(attribute='name') %}
                     <div class="submenu-item">
                         <span>{{ p.name }}</span>
                         <button class="btn-del-tiny" data-url="/delete_profile/{{ p.id }}" data-name="{{ p.name }}"><i class="bi bi-trash"></i></button>
@@ -225,11 +225,11 @@
                 <input type="hidden" name="action_type" id="action_type" value="add">
                 <select class="form-select form-select-lg mb-3 border-0 bg-light" name="profile_id" required style="border-radius: 12px;">
                     <option value="" disabled selected>Выберите человека...</option>
-                    {% for p in profiles %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}
+                    {% for p in profiles|sort(attribute='name') %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}
                 </select>
                 <input type="hidden" name="ex_name" id="selected-ex-name" required>
                 <div class="ex-grid mb-4">
-    {% for ex in ex_types if ex.name != "🏆 Победа" %}
+    {% for ex in ex_types|sort(attribute='name') if ex.name != "🏆 Победа" %}
             <div class="btn-check-custom" 
                  data-unit="{{ ex.unit_type }}" 
                  onclick="selectExercise(this, '{{ ex.name }}')">
@@ -252,12 +252,12 @@
                 <input type="hidden" name="slug" value="{{ room.slug }}">
                 <label class="small text-muted">Игра?</label>
                 <select name="game_name" class="form-select mb-3 bg-light border-0 py-2">
-                    {% for g in games %}<option value="{{ g.game_name }}">{{ g.game_name }} ({{ g.val }} {{ g.ex_name }})</option>{% endfor %}
+                    {% for g in games|sort(attribute='game_name') %}<option value="{{ g.game_name }}">{{ g.game_name }} ({{ g.val }} {{ g.ex_name }})</option>{% endfor %}
                 </select>
                 
                 <label class="small text-muted mb-2 d-block">Кто победил?</label>
                 <div class="winner-checkbox-group mb-3">
-                    {% for p in profiles %}
+                    {% for p in profiles|sort(attribute='name') %}
                     <div class="form-check">
                         <input class="form-check-input" type="checkbox" name="winner_ids" value="{{ p.id }}" id="winner_{{ p.id }}">
                         <label class="form-check-label" for="winner_{{ p.id }}">
@@ -277,7 +277,7 @@
         <div class="card hall-of-fame-card mb-4 shadow-sm">
             <div class="card-body">
                 {% if hall_of_fame %}
-                    {% for p in hall_of_fame %}
+                    {% for p in hall_of_fame|sort(attribute='name') %}
                         <div class="d-flex justify-content-between align-items-center {% if not loop.last %}border-bottom{% endif %} py-2">
                             <span class="hall-of-fame-text">👤 {{ p.name }}</span>
                             <span class="fw-bold" style="color: #3182CE;">
@@ -303,7 +303,7 @@
 
         <h4 class="mt-5 mb-3">📊 Текущие долги</h4>
         <div class="accordion" id="debtsAccordion">
-            {% for name, items in summary.items() %}
+            {% for name, items in summary.items()|sort %}
             {% set ns = namespace(has_debt=false) %}
             {% for ex, val in items.items() %}{% if val > 0 %}{% set ns.has_debt = true %}{% endif %}{% endfor %}
             
@@ -320,7 +320,7 @@
                                 <span class="text-success fw-bold">Долгов нет! ✨</span>
                             </div>
                         {% else %}
-                            {% for ex, val in items.items() %}
+                            {% for ex, val in items.items()|sort %}
                                 {% if val > 0 %}
                                     <div class="d-flex justify-content-between border-bottom py-2">
                                         <span class="text-muted">
