@@ -92,7 +92,8 @@ def add_game():
             if db.game_preset_exists(room['room_id'], ex_name, val_numeric):
                 flash(f"Игра с наказанием '{ex_name} {val_raw}' уже существует!")
             else:
-                db.add_game_preset(room['room_id'], name, ex_name, val_numeric)
+                unit_type = db.get_ex_type(ex_name, room['room_id'])
+                db.add_game_preset(room['room_id'], name, ex_name, val_numeric, unit_type)
         else:
             flash("Некорректное значение наказания")
     return redirect(url_for('index', room=slug))
