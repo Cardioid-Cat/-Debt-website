@@ -16,15 +16,22 @@ def send_tg_notification(room, text):
     except: pass
 
 def time_to_seconds(t_str):
+    """Преобразует строку в секунды. Поддерживает число или ММ:СС. Возвращает None при ошибке."""
     t_str = str(t_str).strip()
+    if not t_str:
+        return None
     try:
         if ":" in t_str:
             parts = t_str.split(":")
             if len(parts) == 2:
                 m, s = map(int, parts)
                 return m * 60 + s
-        return int(t_str)
-    except: return None
+            else:
+                return None
+        else:
+            return int(t_str)
+    except:
+        return None
 
 @website.route('/')
 @website.route('/<slug>')
@@ -83,19 +90,48 @@ def index(slug=None):
 def add_game():
     slug = request.form.get('slug')
     room = db.get_room(slug)
-    if room and session.get(f"auth_{room['room_id']}"):
-        name = request.form.get('name', '').strip()
-        ex_name = request.form.get('ex_name')
-        val_raw = request.form.get('val', '').strip()
-        val_numeric = time_to_seconds(val_raw)
-        if val_numeric is not None and name:
-            if db.game_preset_exists(room['room_id'], ex_name, val_numeric):
-                flash(f"Игра с наказанием '{ex_name} {val_raw}' уже существует!")
-            else:
-                unit_type = db.get_ex_type(ex_name, room['room_id'])
-                db.add_game_preset(room['room_id'], name, ex_name, val_numeric, unit_type)
-        else:
-            flash("Некорректное значение наказания")
+    if not room or not session.get(f"auth_{room['room_id']}"):
+        return redirect(url_for('index', room=slug))
+    
+    name = request.form.get('name', '').strip()
+    ex_name = request.form.get('ex_name')
+    val_raw = request.form.get('val', '').strip()
+    
+    if not name or not ex_name or not val_raw:
+        flash("Заполните все поля")
+        return redirect(url_for('index', room=slug))
+    
+    # Получаем тип упражнения
+    unit_type = db.get_ex_type(ex_name, room['room_id'])
+    
+    # Преобразуем значение в секунды/число
+    val_numeric = time_to_seconds(val_raw)
+    if val_numeric is None:
+        flash("Некорректный формат наказания. Используйте число или ММ:СС (например, 1:30)")
+        return redirect(url_for('index', room=slug))
+    
+    # Проверка: если упражнение на количество, а введено время с двоеточием - ошибка
+    if unit_type == 'amount' and ':' in val_raw:
+        flash("Для упражнения на количество нельзя использовать формат ММ:СС. Введите число.")
+        return redirect(url_for('index', room=slug))
+    
+    # Проверка уникальности названия игры
+    if db.game_name_exists(room['room_id'], name):
+        flash(f"Игра с названием «{name}» уже существует в этой комнате.")
+        return redirect(url_for('index', room=slug))
+    
+    # Проверка на дубликат наказания
+    if db.game_preset_exists(room['room_id'], ex_name, val_numeric):
+        flash(f"Игра с наказанием '{ex_name} {val_raw}' уже существует!")
+        return redirect(url_for('index', room=slug))
+    
+    # Добавляем игру
+    success, err_msg = db.add_game_preset(room['room_id'], name, ex_name, val_numeric, unit_type)
+    if success:
+        flash(f"Игра «{name}» добавлена")
+    else:
+        flash(f"Ошибка: {err_msg}")
+    
     return redirect(url_for('index', room=slug))
 
 @website.route('/add_exercise', methods=['POST'])
@@ -164,6 +200,8 @@ def add_log():
         p_name = db.get_profile_name(p_id)
         action_txt = "списал(а)" if action_type == 'writeoff' else "получил(а) долг"
         send_tg_notification(room, f"⚖️ {p_name} {action_txt}: {ex_name} ({val_raw})")
+    else:
+        flash("Некорректное значение")
     return redirect(url_for('index', room=slug))
 
 @website.route('/play_game', methods=['POST'])
