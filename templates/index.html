@@ -75,11 +75,11 @@
                     <form action="/add_game" method="POST" class="p-2 border-bottom mb-2">
                         <input type="hidden" name="slug" value="{{ room.slug }}">
                         <input type="text" name="name" class="form-control form-control-sm mb-1" placeholder="Название игры" required pattern=".*\S.*" title="Название не может состоять только из пробелов" style="font-size: 0.75rem;">
-                        <select name="ex_name" class="form-select form-select-sm mb-1" style="font-size: 0.75rem;" required>
-                            <option value="" disabled selected>Упражнение</option>
-                            {% for ex in ex_types %}<option value="{{ ex.name }}">{{ ex.name }}</option>{% endfor %}
-                        </select>
-                        <input type="text" name="val" class="form-control form-control-sm mb-1" placeholder="Кол-во или ММ:СС" required pattern=".*\S.*" style="font-size: 0.75rem;">
+                        <select name="ex_name" class="form-select form-select-sm mb-1" style="font-size: 0.75rem;" required onchange="updateGameValPlaceholder(this)">
+    <option value="" disabled selected>Упражнение</option>
+    {% for ex in ex_types %}<option value="{{ ex.name }}" data-unit="{{ ex.unit_type }}">{{ ex.name }}</option>{% endfor %}
+</select>
+<input type="text" name="val" id="game_val_input" class="form-control form-control-sm mb-1" placeholder="Кол-во или ММ:СС" required pattern=".*\S.*" style="font-size: 0.75rem;">
                         <button type="submit" class="btn btn-dark btn-sm w-100" style="font-size: 0.7rem;">+ Добавить</button>
                     </form>
                     {% for g in games %}
