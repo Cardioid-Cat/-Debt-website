@@ -111,7 +111,7 @@
             align-items: center;
             gap: 10px;
         }
-        /* Стили для красивого попапа */
+        /* Попап */
         .popup {
             position: absolute;
             background: #ffffff;
@@ -121,7 +121,7 @@
             font-size: 13px;
             color: #2D3748;
             box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.02);
-            max-width: 260px;
+            max-width: 280px;
             z-index: 1000;
             opacity: 0;
             visibility: hidden;
@@ -163,7 +163,7 @@
             right: 12px;
             color: #A0AEC0;
             cursor: pointer;
-            font-size: 12px;
+            font-size: 14px;
             pointer-events: auto;
         }
         .popup-close:hover {
@@ -176,7 +176,7 @@
         }
         @media (max-width: 640px) {
             .popup {
-                max-width: 220px;
+                max-width: 240px;
                 font-size: 12px;
             }
         }
@@ -252,80 +252,72 @@
         passInput.type = passInput.type === 'password' ? 'text' : 'password';
     }
 
-    // Обработка всплывающих подсказок
+    // Позиционирование попапа
+    function positionPopup(icon, popup) {
+        const rect = icon.getBoundingClientRect();
+        const popupRect = popup.getBoundingClientRect();
+        const scrollTop = window.scrollY || document.documentElement.scrollTop;
+        const scrollLeft = window.scrollX || document.documentElement.scrollLeft;
+
+        // Позиция по вертикали: под иконкой
+        let top = rect.bottom + scrollTop + 8;
+        // Позиция по горизонтали: выравнивание по левому краю иконки, но не вылезать за экран
+        let left = rect.left + scrollLeft;
+        if (left + popupRect.width > window.innerWidth - 10) {
+            left = window.innerWidth - popupRect.width - 10;
+        }
+        if (left < 10) left = 10;
+
+        popup.style.left = left + 'px';
+        popup.style.top = top + 'px';
+
+        // Корректировка позиции стрелки (чтобы указывала на иконку)
+        const arrowOffset = rect.left + scrollLeft - left + (rect.width / 2) - 8;
+        popup.style.setProperty('--arrow-left', Math.max(10, arrowOffset) + 'px');
+        // Для псевдоэлементов ::before и ::after нужно обновить left через CSS
+        popup.style.setProperty('--before-left', Math.max(10, arrowOffset) + 'px');
+        popup.style.setProperty('--after-left', (Math.max(10, arrowOffset) - 1) + 'px');
+    }
+
+    // Инициализация попапов
     document.querySelectorAll('.help-icon').forEach(icon => {
         const popupId = icon.getAttribute('data-popup');
         const popup = document.getElementById(popupId);
         if (!popup) return;
 
-        // Позиционирование попапа
-        function positionPopup() {
-            const rect = icon.getBoundingClientRect();
-            const popupRect = popup.getBoundingClientRect();
-            const scrollTop = window.scrollY || document.documentElement.scrollTop;
-            const scrollLeft = window.scrollX || document.documentElement.scrollLeft;
+        // Добавляем стили для стрелок
+        if (!popup.style.position) popup.style.position = 'absolute';
+        const style = document.createElement('style');
+        style.textContent = `
+            #${popupId}::before { left: var(--before-left, 20px) !important; }
+            #${popupId}::after { left: var(--after-left, 19px) !important; }
+        `;
+        document.head.appendChild(style);
 
-            let top = rect.bottom + scrollTop + 8;
-            let left = rect.left + scrollLeft;
-
-            // Не вылезать за правый край
-            if (left + popupRect.width > window.innerWidth) {
-                left = window.innerWidth - popupRect.width - 15;
-            }
-            // Не вылезать за левый край
-            if (left < 15) left = 15;
-            // Корректировка стрелки
-            const arrowLeft = rect.left + scrollLeft - left + 20;
-            popup.style.setProperty('--arrow-left', arrowLeft + 'px');
-            popup.style.left = left + 'px';
-            popup.style.top = top + 'px';
-            
-            // Устанавливаем позицию стрелки
-            popup.style.setProperty('--arrow-left', arrowLeft + 'px');
-            popup.style.setProperty('--after-left', (arrowLeft - 1) + 'px');
-        }
-
-        // Открыть попап
         function openPopup(e) {
             e.stopPropagation();
-            // Закрыть все остальные
             document.querySelectorAll('.popup.active').forEach(p => {
                 if (p !== popup) p.classList.remove('active');
             });
-            positionPopup();
+            positionPopup(icon, popup);
             popup.classList.add('active');
         }
 
-        // Закрыть попап
         function closePopup() {
             popup.classList.remove('active');
         }
 
-        // Клик на иконку
         icon.addEventListener('click', openPopup);
-
-        // Клик на крестик внутри попапа
         const closeBtn = popup.querySelector('.popup-close');
-        if (closeBtn) {
-            closeBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                closePopup();
-            });
-        }
-
-        // Клик вне попапа – закрываем
+        if (closeBtn) closeBtn.addEventListener('click', (e) => { e.stopPropagation(); closePopup(); });
         document.addEventListener('click', function(event) {
             if (popup.classList.contains('active') && !popup.contains(event.target) && !icon.contains(event.target)) {
                 closePopup();
             }
         });
-
-        // При ресайзе перепозиционируем
-        window.addEventListener('resize', () => {
-            if (popup.classList.contains('active')) positionPopup();
-        });
+        window.addEventListener('resize', () => { if (popup.classList.contains('active')) positionPopup(icon, popup); });
+        window.addEventListener('scroll', () => { if (popup.classList.contains('active')) positionPopup(icon, popup); });
     });
 </script>
-
 </body>
 </html>
