@@ -7,17 +7,22 @@ DATABASE_URL = os.environ.get("DATABASE_URL")
 def get_db_connection():
     return psycopg2.connect(DATABASE_URL, sslmode='require')
 
-# --- БЕЗОПАСНОЕ ДОБАВЛЕНИЕ "🏆 Победа" ---
+# --- БЕЗОПАСНОЕ ДОБАВЛЕНИЕ "🏆 Победа" (без ошибок дубликата) ---
 
 def ensure_hall_of_fame_exercise(room_id):
+    """Добавляет упражнение '🏆 Победа' в комнату, если его ещё нет.
+       Использует WHERE NOT EXISTS, чтобы избежать конфликтов с уникальным ограничением."""
     conn = get_db_connection()
     cur = conn.cursor()
     try:
         cur.execute("""
             INSERT INTO exercise_types (room_id, name, unit_type)
-            VALUES (%s, %s, %s)
-            ON CONFLICT (name, room_id) DO NOTHING
-        """, (room_id, '🏆 Победа', 'amount'))
+            SELECT %s, %s, %s
+            WHERE NOT EXISTS (
+                SELECT 1 FROM exercise_types 
+                WHERE room_id = %s AND name = %s
+            )
+        """, (room_id, '🏆 Победа', 'amount', room_id, '🏆 Победа'))
         conn.commit()
     except Exception as e:
         print(f"ensure_hall_of_fame_exercise error: {e}")
@@ -104,7 +109,6 @@ def create_room(slug, title, password, tg_chat_id=None):
         conn.close()
 
 def game_preset_exists(room_id, ex_name, val):
-    """Проверка на дубликат по упражнению и значению"""
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute(
@@ -117,7 +121,6 @@ def game_preset_exists(room_id, ex_name, val):
     return exists
 
 def game_name_exists(room_id, game_name):
-    """Проверка уникальности названия игры в комнате"""
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute(
@@ -165,19 +168,12 @@ def exercise_type_exists(room_id, name):
 def add_exercise_type(room_id, name, unit_type):
     if name == "🏆 Победа":
         return False
-    # Нормализуем имя (удаляем лишние пробелы, можно и lower, но оставим как есть)
     name = name.strip()
+    if exercise_type_exists(room_id, name):
+        return False
     conn = get_db_connection()
     cur = conn.cursor()
     try:
-        # Сначала проверим, существует ли уже
-        cur.execute(
-            "SELECT 1 FROM exercise_types WHERE room_id = %s AND name = %s",
-            (room_id, name)
-        )
-        if cur.fetchone():
-            return False
-        # Если нет – вставляем
         cur.execute(
             "INSERT INTO exercise_types (room_id, name, unit_type) VALUES (%s, %s, %s)",
             (room_id, name, unit_type)
