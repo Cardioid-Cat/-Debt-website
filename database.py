@@ -7,20 +7,21 @@ DATABASE_URL = os.environ.get("DATABASE_URL")
 def get_db_connection():
     return psycopg2.connect(DATABASE_URL, sslmode='require')
 
-# --- БЕЗОПАСНОЕ ДОБАВЛЕНИЕ "🏆 Победа" (без конфликтов) ---
+# --- БЕЗОПАСНОЕ ДОБАВЛЕНИЕ "🏆 Победа" ---
 
 def ensure_hall_of_fame_exercise(room_id):
-    """Добавляет упражнение '🏆 Победа' в комнату, если его ещё нет.
-       Использует INSERT ... ON CONFLICT, чтобы избежать ошибок параллельного доступа."""
     conn = get_db_connection()
     cur = conn.cursor()
     try:
         cur.execute("""
             INSERT INTO exercise_types (room_id, name, unit_type)
             VALUES (%s, %s, %s)
-            ON CONFLICT (name) DO NOTHING
+            ON CONFLICT (name, room_id) DO NOTHING
         """, (room_id, '🏆 Победа', 'amount'))
         conn.commit()
+    except Exception as e:
+        print(f"ensure_hall_of_fame_exercise error: {e}")
+        conn.rollback()
     finally:
         cur.close()
         conn.close()
@@ -224,7 +225,9 @@ def delete_profile(id_val, room_id):
     conn = get_db_connection()
     cur = conn.cursor()
     try:
+        # Удаляем логи этого участника
         cur.execute("DELETE FROM workout_logs WHERE profile_id = %s AND room_id = %s", (id_val, room_id))
+        # Удаляем сам профиль
         cur.execute("DELETE FROM profiles WHERE id = %s AND room_id = %s", (id_val, room_id))
         conn.commit()
     except Exception as e:
