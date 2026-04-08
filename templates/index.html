@@ -29,6 +29,10 @@
         .undo-section { margin-top: auto; padding-top: 20px; border-top: 1px solid #CBD5E0; }
         .btn-undo { border: 1px solid var(--border-color); background: #fff; border-radius: 8px; padding: 8px; font-size: 0.85rem; width: 100%; }
         .accordion-button:not(.collapsed) { background-color: #FFF5F5; color: var(--accent-red); }
+        
+        /* Стиль для плашки Зала Славы */
+        .hall-of-fame-card { background: #EBF4FF; border: none; border-radius: 12px; }
+        .hall-of-fame-text { color: #3182CE; font-weight: 500; }
     </style>
 </head>
 <body>
@@ -44,7 +48,7 @@
                 <div id="sub-games" class="submenu-settings">
                     <form action="/add_game" method="POST" class="p-2 border-bottom mb-2">
                         <input type="hidden" name="slug" value="{{ room.slug }}">
-                        <input type="text" name="name" class="form-control form-control-sm mb-1" placeholder="Название игры" required style="font-size: 0.75rem;">
+                        <input type="text" name="name" class="form-control form-control-sm mb-1" placeholder="Название игры" required pattern=".*\S.*" title="Название не может состоять только из пробелов" style="font-size: 0.75rem;">
                         <select name="ex_name" class="form-select form-select-sm mb-1" style="font-size: 0.75rem;" required>
                             <option value="" disabled selected>Упражнение</option>
                             {% for ex in ex_types %}<option value="{{ ex.name }}">{{ ex.name }}</option>{% endfor %}
@@ -64,7 +68,7 @@
                 <div id="sub-ex" class="submenu-settings">
                     <form action="/add_exercise" method="POST" class="p-2 border-bottom mb-2">
                         <input type="hidden" name="slug" value="{{ room.slug }}">
-                        <input type="text" name="name" class="form-control form-control-sm mb-1" placeholder="Название" required style="font-size: 0.75rem;">
+                        <input type="text" name="name" class="form-control form-control-sm mb-1" placeholder="Название" required pattern=".*\S.*" style="font-size: 0.75rem;">
                         <select name="unit_type" class="form-select form-select-sm mb-1" style="font-size: 0.75rem;">
                             <option value="amount">Количество</option>
                             <option value="time">Время (ММ:СС)</option>
@@ -83,7 +87,7 @@
                 <div id="sub-users" class="submenu-settings">
                     <form action="/add_profile" method="POST" class="p-2 border-bottom mb-2">
                         <input type="hidden" name="slug" value="{{ room.slug }}">
-                        <input type="text" name="name" class="form-control form-control-sm mb-1" placeholder="Имя" required style="font-size: 0.75rem;">
+                        <input type="text" name="name" class="form-control form-control-sm mb-1" placeholder="Имя" required pattern=".*\S.*" style="font-size: 0.75rem;">
                         <button type="submit" class="btn btn-dark btn-sm w-100" style="font-size: 0.7rem;">+ Добавить</button>
                     </form>
                     {% for p in profiles %}
@@ -173,10 +177,27 @@
         </div>
         {% endif %}
 
+        <h4 class="mt-5 mb-3">🥇 Рейтинг чемпионов</h4>
+        <div class="card hall-of-fame-card mb-4 shadow-sm">
+            <div class="card-body">
+                {% if hall_of_fame %}
+                    {% for p in hall_of_fame %}
+                        <div class="d-flex justify-content-between align-items-center {% if not loop.last %}border-bottom{% endif %} py-2">
+                            <span class="hall-of-fame-text">👤 {{ p.name }}</span>
+                            <span class="fw-bold" style="color: #3182CE;">{{ p.wins }} побед</span>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-2 hall-of-fame-text">
+                        Побед пока нет.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
         <h4 class="mt-5 mb-3">📊 Текущие долги</h4>
         <div class="accordion" id="debtsAccordion">
             {% for name, items in summary.items() %}
-            {# Считаем, есть ли хотя бы один долг больше 0 #}
             {% set ns = namespace(has_debt=false) %}
             {% for ex, val in items.items() %}{% if val > 0 %}{% set ns.has_debt = true %}{% endif %}{% endfor %}
             
@@ -215,6 +236,7 @@
             </div>
             {% endfor %}
         </div>
+    </div>
 
     <div class="modal fade" id="deleteConfirmModal" tabindex="-1">
       <div class="modal-dialog modal-dialog-centered">
