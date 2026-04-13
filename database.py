@@ -286,3 +286,15 @@ def delete_last_log(room_id):
     finally:
         cursor.close()
         conn.close()
+        
+# === РАБОТА С УЧАСТНИКАМИ ГРУПП ДЛЯ УПОМИНАНИЙ ===
+
+def get_group_members(chat_id: int):
+    """Возвращает список user_id участников Telegram-группы."""
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT user_id FROM group_members WHERE chat_id = %s", (chat_id,))
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return [row[0] for row in rows]
