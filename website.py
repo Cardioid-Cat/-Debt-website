@@ -7,13 +7,25 @@ website = Flask(__name__)
 website.secret_key = os.environ.get("FLASK_SECRET_KEY", "vova_top_secret_777")
 
 def send_tg_notification(room, text):
+    """Отправляет сообщение в Telegram-группу комнаты с упоминанием всех участников (скрытые упоминания)."""
     token = os.environ.get("TELEGRAM_BOT_TOKEN")
     chat_id = room.get("tg_chat_id")
-    if not token or not chat_id: return
+    if not token or not chat_id:
+        return
     try:
-        requests.post(f"https://api.telegram.org/bot{token}/sendMessage", 
-                      json={"chat_id": chat_id, "text": f"📢 @all ({room['title']})\n{text}"}, timeout=5)
-    except: pass
+        members = db.get_group_members(int(chat_id))
+        if members:
+            mentions = "".join([f'<a href="tg://user?id={uid}">\u2060</a>' for uid in members])
+            full_text = f"{mentions}\n{text}"
+        else:
+            full_text = f"📢 @all\n{text}"
+        requests.post(
+            f"https://api.telegram.org/bot{token}/sendMessage",
+            json={"chat_id": chat_id, "text": full_text, "parse_mode": "HTML"},
+            timeout=5
+        )
+    except Exception as e:
+        print(f"Ошибка отправки в Telegram: {e}")
 
 def time_to_seconds(t_str):
     """Преобразует строку в секунды. Поддерживает число или ММ:СС. Возвращает None при ошибке."""
@@ -231,9 +243,16 @@ def play_game():
                 else:
                     db.add_log(p['id'], "🏆 Победа", 1, room['room_id'])
             
-            if losers_names:
-                msg = f"🎮 Игра: {game_name}\n💀 Проиграли: {', '.join(losers_names)} (+{game['val']})"
-                send_tg_notification(room, msg)
+            # ... внутри play_game, после определения losers_names ...
+if losers_names:
+    exercise_name = game['ex_name']
+    val_display = game['val']
+    if game['unit_type'] == 'time':
+        minutes = val_display // 60
+        seconds = val_display % 60
+        val_display = f"{minutes}:{seconds:02d}"
+    msg = f"🎮 Игра: {game_name}\n💀 Проиграли: {', '.join(losers_names)} (+{val_display} {exercise_name})"
+    send_tg_notification(room, msg)
         except Exception as e:
             flash(f"Ошибка при обработке игры: {e}")
     return redirect(url_for('index', room=slug))
