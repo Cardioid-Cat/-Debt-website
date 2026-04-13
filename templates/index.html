@@ -10,7 +10,7 @@
         :root { --sidebar-bg: #F1F3F9; --accent-red: #FF5A50; --border-color: #E2E8F0; }
         body { background: #FFFFFF; font-family: 'Inter', sans-serif; display: flex; min-height: 100vh; margin: 0; }
         
-        /* --- Боковое меню (общие стили) --- */
+        /* --- Боковое меню --- */
         .sidebar {
             width: 260px;
             background: var(--sidebar-bg);
@@ -34,7 +34,7 @@
         .sidebar.collapsed .sidebar-hide {
             display: none !important;
         }
-        /* Кнопка переключения (стрелки) */
+        /* Кнопка переключения (стрелки) – внутри сайдбара, справа сверху */
         .toggle-btn {
             position: absolute;
             right: 5px;
@@ -124,9 +124,8 @@
             .ex-grid {
                 grid-template-columns: repeat(2, 1fr);
             }
-            /* Кнопка переключения всегда видна */
+            /* Кнопка переключения всегда видна, фиксирована слева вверху */
             .toggle-btn {
-                display: block;
                 position: fixed;
                 left: 10px;
                 top: 15px;
@@ -138,7 +137,7 @@
             }
         }
         @media (min-width: 769px) {
-            /* На ПК кнопка остаётся внутри сайдбара */
+            /* На ПК кнопка внутри сайдбара, абсолютное позиционирование */
             .toggle-btn {
                 position: absolute;
                 right: 5px;
@@ -149,10 +148,13 @@
 </head>
 <body>
 
-    <!-- Единая кнопка переключения сайдбара (работает везде) -->
-    <button class="toggle-btn" onclick="toggleSidebar()"><i id="toggle-icon" class="bi bi-chevron-double-left"></i></button>
-
+    <!-- САЙДБАР (кнопка переключения ВНУТРИ него) -->
     <div class="sidebar" id="sidebar">
+        <!-- Кнопка для свёртки/развёртки -->
+        <button class="toggle-btn" onclick="toggleSidebar()">
+            <i id="toggle-icon" class="bi bi-chevron-double-left"></i>
+        </button>
+        
         <div class="h-100 d-flex flex-column">
             <h5 class="mb-4">
                 <i class="bi bi-gear"></i>
@@ -415,7 +417,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // ========== УПРАВЛЕНИЕ САЙДБАРОМ (единая логика для ПК и мобильных) ==========
+        // ========== УПРАВЛЕНИЕ САЙДБАРОМ (с кнопкой) ==========
         function toggleSidebar() {
             const sb = document.getElementById('sidebar');
             sb.classList.toggle('collapsed');
@@ -427,7 +429,7 @@
             }
         }
 
-        // Инициализация: на ПК сайдбар развёрнут, на мобильных – свёрнут
+        // Инициализация: на ПК сайдбар развёрнут, на мобильных – свёрнут (но кнопка видна)
         function initSidebar() {
             const sb = document.getElementById('sidebar');
             const isMobile = window.innerWidth <= 768;
@@ -440,7 +442,6 @@
             }
         }
 
-        // При ресайзе окна переинициализируем
         window.addEventListener('resize', initSidebar);
         document.addEventListener('DOMContentLoaded', initSidebar);
 
@@ -450,7 +451,6 @@
             const toggleBtn = document.querySelector('.toggle-btn');
             const isMobile = window.innerWidth <= 768;
             if (isMobile && !sb.classList.contains('collapsed')) {
-                // Если клик не по сайдбару и не по кнопке – закрываем
                 if (!sb.contains(event.target) && !toggleBtn.contains(event.target)) {
                     sb.classList.add('collapsed');
                     document.getElementById('toggle-icon').className = 'bi bi-chevron-double-right';
