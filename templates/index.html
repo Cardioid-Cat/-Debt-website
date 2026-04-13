@@ -34,18 +34,21 @@
         .sidebar.collapsed .sidebar-hide {
             display: none !important;
         }
-        /* Кнопка переключения (стрелки) – внутри сайдбара, справа сверху */
+        
+        /* --- Кнопка переключения (фиксированная, всегда видна) --- */
         .toggle-btn {
-            position: absolute;
-            right: 5px;
-            top: 20px;
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            z-index: 1100;
             background: #fff;
             border: 1px solid var(--border-color);
-            border-radius: 6px;
+            border-radius: 8px;
             cursor: pointer;
-            z-index: 100;
-            padding: 2px 5px;
+            padding: 6px 10px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
+        
         /* --- Остальные стили (без изменений) --- */
         .nav-link-custom { background: #fff; border: 1px solid var(--border-color); border-radius: 12px; padding: 12px; margin-bottom: 5px; display: flex; align-items: center; text-decoration: none; color: #2D3748; font-weight: 500; font-size: 0.85rem; cursor: pointer; }
         .submenu-settings { display: none; background: #fff; border: 1px solid var(--border-color); border-radius: 12px; margin-bottom: 15px; padding: 8px; flex-direction: column; gap: 4px; }
@@ -124,37 +127,32 @@
             .ex-grid {
                 grid-template-columns: repeat(2, 1fr);
             }
-            /* Кнопка переключения всегда видна, фиксирована слева вверху */
+            /* Кнопка всегда видна, поверх всего */
             .toggle-btn {
                 position: fixed;
                 left: 10px;
                 top: 15px;
-                z-index: 1001;
-                background: #fff;
-                border: 1px solid var(--border-color);
-                border-radius: 8px;
-                padding: 6px 10px;
             }
         }
         @media (min-width: 769px) {
-            /* На ПК кнопка внутри сайдбара, абсолютное позиционирование */
+            /* На ПК кнопка остаётся фиксированной, но можно чуть сдвинуть, чтобы не мешала */
             .toggle-btn {
-                position: absolute;
-                right: 5px;
-                top: 20px;
+                position: fixed;
+                left: 15px;
+                top: 15px;
             }
         }
     </style>
 </head>
 <body>
 
-    <!-- САЙДБАР (кнопка переключения ВНУТРИ него) -->
+    <!-- КНОПКА ПЕРЕКЛЮЧЕНИЯ САЙДБАРА (всегда видна) -->
+    <button class="toggle-btn" onclick="toggleSidebar()">
+        <i id="toggle-icon" class="bi bi-chevron-double-left"></i>
+    </button>
+
+    <!-- САЙДБАР -->
     <div class="sidebar" id="sidebar">
-        <!-- Кнопка для свёртки/развёртки -->
-        <button class="toggle-btn" onclick="toggleSidebar()">
-            <i id="toggle-icon" class="bi bi-chevron-double-left"></i>
-        </button>
-        
         <div class="h-100 d-flex flex-column">
             <h5 class="mb-4">
                 <i class="bi bi-gear"></i>
@@ -417,7 +415,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // ========== УПРАВЛЕНИЕ САЙДБАРОМ (с кнопкой) ==========
+        // ========== УПРАВЛЕНИЕ САЙДБАРОМ ==========
         function toggleSidebar() {
             const sb = document.getElementById('sidebar');
             sb.classList.toggle('collapsed');
@@ -429,7 +427,7 @@
             }
         }
 
-        // Инициализация: на ПК сайдбар развёрнут, на мобильных – свёрнут (но кнопка видна)
+        // Инициализация: на ПК сайдбар развёрнут, на мобильных – свёрнут
         function initSidebar() {
             const sb = document.getElementById('sidebar');
             const isMobile = window.innerWidth <= 768;
