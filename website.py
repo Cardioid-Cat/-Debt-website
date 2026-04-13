@@ -15,10 +15,10 @@ def send_tg_notification(room, text):
     try:
         members = db.get_group_members(int(chat_id))
         if members:
-    mentions = "".join([f'<a href="tg://user?id={uid}">\u2060</a>' for uid in members])
-    full_text = f"📢 @all {mentions}\n{text}"
-else:
-    full_text = f"📢 @all\n{text}"
+            mentions = "".join([f'<a href="tg://user?id={uid}">\u2060</a>' for uid in members])
+            full_text = f"📢 @all {mentions}\n{text}"
+        else:
+            full_text = f"📢 @all\n{text}"
         requests.post(
             f"https://api.telegram.org/bot{token}/sendMessage",
             json={"chat_id": chat_id, "text": full_text, "parse_mode": "HTML"},
