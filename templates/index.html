@@ -7,6 +7,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <style>
+        
         :root { --sidebar-bg: #F1F3F9; --accent-red: #FF5A50; --border-color: #E2E8F0; }
         body { background: #FFFFFF; font-family: 'Inter', sans-serif; display: flex; min-height: 100vh; margin: 0; }
         .sidebar { width: 260px; background: var(--sidebar-bg); border-right: 1px solid var(--border-color); padding: 25px 15px; display: flex; flex-direction: column; transition: width 0.3s, transform 0.3s; position: relative; overflow-y: auto; }
@@ -117,7 +118,10 @@
     <div class="sidebar" id="sidebar">
         <button class="toggle-btn" onclick="toggleSidebar()"><i id="toggle-icon" class="bi bi-chevron-double-left"></i></button>
         <div class="h-100 d-flex flex-column">
-            <h5 class="mb-4 sidebar-text"><i class="bi bi-gear"></i>&nbsp; Настройки</h5>
+            <h5 class="mb-4">
+    <i class="bi bi-gear"></i>
+    <span class="sidebar-text">&nbsp; Настройки</span>
+</h5>
             {% if is_admin %}
                 <a href="/logout?slug={{ room.slug|urlencode }}" class="btn btn-sm btn-light mb-4 border sidebar-text">Выйти</a>
                 
