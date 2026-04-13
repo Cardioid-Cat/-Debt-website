@@ -10,7 +10,7 @@
         :root { --sidebar-bg: #F1F3F9; --accent-red: #FF5A50; --border-color: #E2E8F0; }
         body { background: #FFFFFF; font-family: 'Inter', sans-serif; display: flex; min-height: 100vh; margin: 0; }
         
-        /* --- Боковое меню --- */
+        /* --- Боковое меню (общие стили) --- */
         .sidebar {
             width: 260px;
             background: var(--sidebar-bg);
@@ -18,11 +18,12 @@
             padding: 25px 15px;
             display: flex;
             flex-direction: column;
-            transition: width 0.3s, transform 0.3s;
+            transition: width 0.3s;
             position: relative;
             overflow-y: auto;
+            flex-shrink: 0;
         }
-        /* Свёрнутое состояние на ПК (ширина 85px) */
+        /* Свёрнутое состояние (ПК и мобильные) */
         .sidebar.collapsed {
             width: 85px;
             padding: 25px 12px;
@@ -34,21 +35,18 @@
         .sidebar.collapsed .sidebar-hide {
             display: none !important;
         }
-        
-        /* --- Кнопка переключения (фиксированная, всегда видна) --- */
+        /* Кнопка переключения (внутри сайдбара, справа сверху) */
         .toggle-btn {
-            position: fixed;
-            top: 15px;
-            left: 15px;
-            z-index: 1100;
+            position: absolute;
+            right: 5px;
+            top: 20px;
             background: #fff;
             border: 1px solid var(--border-color);
-            border-radius: 8px;
+            border-radius: 6px;
             cursor: pointer;
-            padding: 6px 10px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            z-index: 100;
+            padding: 2px 5px;
         }
-        
         /* --- Остальные стили (без изменений) --- */
         .nav-link-custom { background: #fff; border: 1px solid var(--border-color); border-radius: 12px; padding: 12px; margin-bottom: 5px; display: flex; align-items: center; text-decoration: none; color: #2D3748; font-weight: 500; font-size: 0.85rem; cursor: pointer; }
         .submenu-settings { display: none; background: #fff; border: 1px solid var(--border-color); border-radius: 12px; margin-bottom: 15px; padding: 8px; flex-direction: column; gap: 4px; }
@@ -97,62 +95,56 @@
             margin-left: 10px;
         }
         
-        /* --- Адаптивность для мобильных устройств --- */
+        /* --- Адаптивность для мобильных устройств (сайдбар всегда виден, управляем шириной) --- */
         @media (max-width: 768px) {
-            /* Сайдбар фиксированной ширины, управление видимостью через transform */
+            /* На мобильных сайдбар не уезжает, а просто сужается до 85px по умолчанию */
             .sidebar {
-                position: fixed;
-                left: 0;
-                top: 0;
-                bottom: 0;
-                z-index: 1000;
-                width: 260px;
-                transition: transform 0.3s;
-                transform: translateX(-100%);  /* скрыт по умолчанию */
+                width: 85px;
+                padding: 25px 12px;
             }
-            /* Когда НЕ свёрнут (т.е. открыт) – показываем */
             .sidebar:not(.collapsed) {
-                transform: translateX(0);
-            }
-            /* Свёрнутое состояние на мобильных не меняет ширину, а просто скрывает */
-            .sidebar.collapsed {
-                transform: translateX(-100%);
                 width: 260px;
+                padding: 25px 15px;
             }
-            /* Основной контент */
+            .sidebar.collapsed {
+                width: 85px;
+                padding: 25px 12px;
+            }
+            /* Кнопка остаётся внутри сайдбара, справа сверху */
+            .toggle-btn {
+                position: absolute;
+                right: 5px;
+                top: 20px;
+            }
             .main-content {
-                width: 100%;
+                width: calc(100% - 85px);
                 padding: 15px !important;
+            }
+            /* Когда сайдбар развёрнут, основной контент сдвигается */
+            body:has(.sidebar:not(.collapsed)) .main-content {
+                width: calc(100% - 260px);
             }
             .ex-grid {
                 grid-template-columns: repeat(2, 1fr);
             }
-            /* Кнопка всегда видна, поверх всего */
-            .toggle-btn {
-                position: fixed;
-                left: 10px;
-                top: 15px;
-            }
         }
         @media (min-width: 769px) {
-            /* На ПК кнопка остаётся фиксированной, но можно чуть сдвинуть, чтобы не мешала */
-            .toggle-btn {
-                position: fixed;
-                left: 15px;
-                top: 15px;
+            /* На ПК всё стандартно */
+            .main-content {
+                flex-grow: 1;
             }
         }
     </style>
 </head>
 <body>
 
-    <!-- КНОПКА ПЕРЕКЛЮЧЕНИЯ САЙДБАРА (всегда видна) -->
-    <button class="toggle-btn" onclick="toggleSidebar()">
-        <i id="toggle-icon" class="bi bi-chevron-double-left"></i>
-    </button>
-
-    <!-- САЙДБАР -->
+    <!-- САЙДБАР (кнопка внутри него, справа сверху) -->
     <div class="sidebar" id="sidebar">
+        <!-- Кнопка для свёртки/развёртки -->
+        <button class="toggle-btn" onclick="toggleSidebar()">
+            <i id="toggle-icon" class="bi bi-chevron-double-left"></i>
+        </button>
+        
         <div class="h-100 d-flex flex-column">
             <h5 class="mb-4">
                 <i class="bi bi-gear"></i>
@@ -415,7 +407,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // ========== УПРАВЛЕНИЕ САЙДБАРОМ ==========
+        // ========== УПРАВЛЕНИЕ САЙДБАРОМ (кнопка внутри) ==========
         function toggleSidebar() {
             const sb = document.getElementById('sidebar');
             sb.classList.toggle('collapsed');
@@ -427,7 +419,7 @@
             }
         }
 
-        // Инициализация: на ПК сайдбар развёрнут, на мобильных – свёрнут
+        // На мобильных устройствах сайдбар по умолчанию свёрнут (collapsed)
         function initSidebar() {
             const sb = document.getElementById('sidebar');
             const isMobile = window.innerWidth <= 768;
@@ -442,19 +434,6 @@
 
         window.addEventListener('resize', initSidebar);
         document.addEventListener('DOMContentLoaded', initSidebar);
-
-        // Закрытие сайдбара при клике вне его на мобильных (если он открыт)
-        document.addEventListener('click', function(event) {
-            const sb = document.getElementById('sidebar');
-            const toggleBtn = document.querySelector('.toggle-btn');
-            const isMobile = window.innerWidth <= 768;
-            if (isMobile && !sb.classList.contains('collapsed')) {
-                if (!sb.contains(event.target) && !toggleBtn.contains(event.target)) {
-                    sb.classList.add('collapsed');
-                    document.getElementById('toggle-icon').className = 'bi bi-chevron-double-right';
-                }
-            }
-        });
 
         // ========== ОСТАЛЬНЫЕ ФУНКЦИИ (без изменений) ==========
         function toggleSubmenu(id) {
