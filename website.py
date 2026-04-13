@@ -113,31 +113,24 @@ def add_game():
         flash("Заполните все поля")
         return redirect(url_for('index', room=slug))
     
-    # Получаем тип упражнения
     unit_type = db.get_ex_type(ex_name, room['room_id'])
-    
-    # Преобразуем значение в секунды/число
     val_numeric = time_to_seconds(val_raw)
     if val_numeric is None:
         flash("Некорректный формат наказания. Используйте число или ММ:СС (например, 1:30)")
         return redirect(url_for('index', room=slug))
     
-    # Проверка: если упражнение на количество, а введено время с двоеточием - ошибка
     if unit_type == 'amount' and ':' in val_raw:
         flash("Для упражнения на количество нельзя использовать формат ММ:СС. Введите число.")
         return redirect(url_for('index', room=slug))
     
-    # Проверка уникальности названия игры
     if db.game_name_exists(room['room_id'], name):
         flash(f"Игра с названием «{name}» уже существует в этой комнате.")
         return redirect(url_for('index', room=slug))
     
-    # Проверка на дубликат наказания
     if db.game_preset_exists(room['room_id'], ex_name, val_numeric):
         flash(f"Игра с наказанием '{ex_name} {val_raw}' уже существует!")
         return redirect(url_for('index', room=slug))
     
-    # Добавляем игру
     success, err_msg = db.add_game_preset(room['room_id'], name, ex_name, val_numeric, unit_type)
     if success:
         flash(f"Игра «{name}» добавлена")
@@ -226,7 +219,8 @@ def add_log():
 def play_game():
     slug = request.form.get('slug')
     room = db.get_room(slug)
-    if not room or not session.get(f"auth_{room['room_id']}"): return "403", 403
+    if not room or not session.get(f"auth_{room['room_id']}"):
+        return "403", 403
     game_name = request.form.get('game_name')
     winner_ids = request.form.getlist('winner_ids')
     games = db.get_data("games_presets", room['room_id'])
@@ -243,16 +237,15 @@ def play_game():
                 else:
                     db.add_log(p['id'], "🏆 Победа", 1, room['room_id'])
             
-            # ... внутри play_game, после определения losers_names ...
-if losers_names:
-    exercise_name = game['ex_name']
-    val_display = game['val']
-    if game['unit_type'] == 'time':
-        minutes = val_display // 60
-        seconds = val_display % 60
-        val_display = f"{minutes}:{seconds:02d}"
-    msg = f"🎮 Игра: {game_name}\n💀 Проиграли: {', '.join(losers_names)} (+{val_display} {exercise_name})"
-    send_tg_notification(room, msg)
+            if losers_names:
+                exercise_name = game['ex_name']
+                val_display = game['val']
+                if game['unit_type'] == 'time':
+                    minutes = val_display // 60
+                    seconds = val_display % 60
+                    val_display = f"{minutes}:{seconds:02d}"
+                msg = f"🎮 Игра: {game_name}\n💀 Проиграли: {', '.join(losers_names)} (+{val_display} {exercise_name})"
+                send_tg_notification(room, msg)
         except Exception as e:
             flash(f"Ошибка при обработке игры: {e}")
     return redirect(url_for('index', room=slug))
